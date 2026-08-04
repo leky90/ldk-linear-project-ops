@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "approved": false,
+  "teamId": "8dee37c7-a36e-4e19-8e42-d88b8b72f663",
+  "projectId": "98a2bdf1-f648-4ba0-8de6-d37480b5daac",
+  "items": [
+    {
+      "key": "replace-with-stable-key",
+      "title": "[Area] Kết quả cần bàn giao",
+      "description": "Mô tả scope, acceptance criteria, giới hạn và evidence cần nộp.",
+      "capabilities": ["software.review"],
+      "resources": ["replace:with:exclusive-scope"],
+      "priority": 3
+    }
+  ]
+}

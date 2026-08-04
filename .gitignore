@@ -1,0 +1,7 @@
+node_modules/
+.state/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.env
+config/linear.json

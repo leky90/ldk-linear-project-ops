@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "linear": {
+    "teamId": "NEW_LINEAR_TEAM_ID",
+    "projectId": "NEW_LINEAR_PROJECT_ID",
+    "statuses": {
+      "ready": "READY_STATUS_ID",
+      "inProgress": "IN_PROGRESS_STATUS_ID",
+      "inReview": "IN_REVIEW_STATUS_ID",
+      "blocked": "BLOCKED_STATUS_ID",
+      "done": "DONE_STATUS_ID"
+    }
+  },
+  "claimDatabase": ".state/claims.sqlite",
+  "defaultLeaseMs": 1800000
+}
