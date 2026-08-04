@@ -10,6 +10,7 @@ import {
   createAgentWorkflow,
   parseTaskMetadata,
   validateConfig,
+  validateDecomposition,
   validatePlan,
 } from "../src/index.mjs";
 
@@ -194,11 +195,95 @@ test("review and done require evidence while blocked requires a reason", async (
   }
 });
 
+test("a claimed complex parent is decomposed into 2-7 idempotent sub-issues", async () => {
+  const fixture = await createFixture({
+    issues: [readyIssue({ id: "parent-1", key: "PARENT-1", kind: "parent" })],
+  });
+  try {
+    const claim = await fixture.workflow.claimNext({ workerId: "codex-planner", capabilities: ["sales.research"] });
+    const result = await fixture.workflow.decompose({
+      token: claim.token,
+      plan: decomposition(),
+    });
+    assert.equal(result.created, 2);
+    assert.equal(result.existing, 0);
+    assert.equal(fixture.linear.created.length, 2);
+    assert.ok(fixture.linear.created.every(({ parentId }) => parentId === "parent-1"));
+    assert.ok(fixture.linear.created.every(({ description }) => parseTaskMetadata(description).kind === "sub-issue"));
+    assert.deepEqual(fixture.linear.blockers, [{ issueId: "created-2", blockerIssueId: "created-1" }]);
+    assert.equal(fixture.store.listActive().length, 0);
+    assert.equal(fixture.linear.issues.find(({ id }) => id === "parent-1").statusId, "status-in-progress");
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("decomposition reuses existing child keys and rejects an invalid child count", async () => {
+  const fixture = await createFixture({
+    issues: [
+      readyIssue({ id: "parent-1", key: "PARENT-1", kind: "parent" }),
+      readyIssue({
+        id: "child-existing",
+        key: "parent-1-discovery",
+        kind: "sub-issue",
+        parentId: "parent-1",
+      }),
+    ],
+  });
+  try {
+    const claim = await fixture.workflow.claimNext({ workerId: "codex-planner", capabilities: ["sales.research"] });
+    await assert.rejects(
+      fixture.workflow.decompose({ token: claim.token, plan: decomposition({ children: [decomposition().children[0]] }) }),
+      (error) => error.code === "DECOMPOSITION_INVALID",
+    );
+    assert.equal(fixture.store.listActive().length, 1);
+    const result = await fixture.workflow.decompose({ token: claim.token, plan: decomposition() });
+    assert.equal(result.created, 1);
+    assert.equal(result.existing, 1);
+    assert.equal(fixture.linear.created.length, 1);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("parent reconciliation moves completed work to review and stalled work to blocked", async () => {
+  const fixture = await createFixture({
+    issues: [
+      readyIssue({ id: "parent-done", key: "PARENT-DONE", statusId: "status-in-progress" }),
+      readyIssue({ id: "done-a", key: "done-a", kind: "sub-issue", parentId: "parent-done", statusId: "status-done" }),
+      readyIssue({ id: "done-b", key: "done-b", kind: "sub-issue", parentId: "parent-done", statusId: "status-done" }),
+      readyIssue({ id: "parent-blocked", key: "PARENT-BLOCKED", statusId: "status-in-progress" }),
+      readyIssue({ id: "blocked-a", key: "blocked-a", kind: "sub-issue", parentId: "parent-blocked", statusId: "status-blocked" }),
+      readyIssue({ id: "done-c", key: "done-c", kind: "sub-issue", parentId: "parent-blocked", statusId: "status-done" }),
+      readyIssue({ id: "parent-resume", key: "PARENT-RESUME", statusId: "status-blocked" }),
+      readyIssue({ id: "ready-a", key: "ready-a", kind: "sub-issue", parentId: "parent-resume", statusId: "status-ready" }),
+      readyIssue({ id: "blocked-b", key: "blocked-b", kind: "sub-issue", parentId: "parent-resume", statusId: "status-blocked" }),
+    ],
+  });
+  try {
+    const result = await fixture.workflow.reconcileParents();
+    assert.deepEqual(result, { schemaVersion: 1, reviewed: 1, blocked: 1, resumed: 1 });
+    assert.deepEqual(fixture.linear.stateChanges, [
+      { issueId: "parent-done", statusId: "status-in-review" },
+      { issueId: "parent-blocked", statusId: "status-blocked" },
+      { issueId: "parent-resume", statusId: "status-in-progress" },
+    ]);
+  } finally {
+    await fixture.close();
+  }
+});
+
 test("metadata and configuration reject unsafe or ambiguous input", () => {
   assert.throws(() => parseTaskMetadata("no metadata"), (error) => error.code === "TASK_METADATA_REQUIRED");
   assert.throws(
     () => validateConfig({ ...validConfig("claims.sqlite"), linearApiKey: "secret" }),
     (error) => error.code === "CONFIG_SECRET_FORBIDDEN",
+  );
+  const cyclic = decomposition();
+  cyclic.children[0].blockedByKeys = [cyclic.children[1].key];
+  assert.throws(
+    () => validateDecomposition(cyclic),
+    (error) => error.code === "DECOMPOSITION_INVALID" && /cycle/u.test(error.message),
   );
 });
 
@@ -248,6 +333,7 @@ class FakeLinear {
     this.created = [];
     this.stateChanges = [];
     this.comments = [];
+    this.blockers = [];
   }
 
   async listProjectIssues() {
@@ -265,6 +351,16 @@ class FakeLinear {
     this.created.push(created);
     this.issues.push({ ...created, statusId: input.statusId, blocked: false });
     return created;
+  }
+
+  async ensureBlockedBy({ issueId, blockerIssueId }) {
+    const issue = this.issues.find(({ id }) => id === issueId);
+    issue.blockedByIds ??= [];
+    if (!issue.blockedByIds.includes(blockerIssueId)) {
+      issue.blockedByIds.push(blockerIssueId);
+      issue.blocked = true;
+      this.blockers.push({ issueId, blockerIssueId });
+    }
   }
 
   async updateIssueState({ issueId, statusId }) {
@@ -322,22 +418,57 @@ function plan(overrides = {}) {
   };
 }
 
-function readyIssue({ id, key, resources = ["docs:lead-sop"] }) {
+function readyIssue({
+  id,
+  key,
+  resources = ["docs:lead-sop"],
+  kind = "parent",
+  parentId = null,
+  statusId = "status-ready",
+}) {
   return {
     id,
     identifier: key,
     title: `Task ${key}`,
     description: `Work safely.\n\n\`\`\`ldk-agent\n${JSON.stringify({
       key: key.toLowerCase(),
+      kind,
       claimable: true,
       capabilities: ["sales.research"],
       resources,
     })}\n\`\`\``,
     projectId: "new-project",
     teamId: "new-team",
-    statusId: "status-ready",
+    parentId,
+    blockedByIds: [],
+    statusId,
     priority: 2,
     blocked: false,
     url: `https://linear.app/new/issue/${key}`,
+  };
+}
+
+function decomposition(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    children: [
+      {
+        key: "parent-1-discovery",
+        title: "Discover inputs",
+        description: "Collect and verify the inputs.",
+        capabilities: ["sales.research"],
+        resources: ["docs:lead-sop:discovery"],
+        blockedByKeys: [],
+      },
+      {
+        key: "parent-1-draft",
+        title: "Draft output",
+        description: "Produce the reviewed draft.",
+        capabilities: ["sales.research"],
+        resources: ["docs:lead-sop:draft"],
+        blockedByKeys: ["parent-1-discovery"],
+      },
+    ],
+    ...overrides,
   };
 }

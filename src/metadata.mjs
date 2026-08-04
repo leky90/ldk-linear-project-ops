@@ -21,11 +21,13 @@ export function parseTaskMetadata(description) {
     || value.claimable !== true
     || !stringArray(value.capabilities)
     || !stringArray(value.resources)
+    || ![undefined, "parent", "sub-issue"].includes(value.kind)
   ) {
     throw new AgentWorkflowError("TASK_METADATA_INVALID", "ldk-agent metadata fields are incomplete");
   }
   return {
     key: value.key.trim(),
+    kind: value.kind ?? "parent",
     claimable: true,
     capabilities: unique(value.capabilities),
     resources: unique(value.resources),
@@ -35,6 +37,7 @@ export function parseTaskMetadata(description) {
 export function formatTaskDescription(item) {
   const metadata = {
     key: item.key,
+    kind: item.kind ?? "parent",
     claimable: true,
     capabilities: unique(item.capabilities),
     resources: unique(item.resources),

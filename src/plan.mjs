@@ -36,6 +36,7 @@ export function validatePlan(value, config, { requireApproved = true } = {}) {
     keys.add(key);
     return {
       key,
+      kind: "parent",
       title: item.title.trim(),
       description: item.description.trim(),
       capabilities: unique(item.capabilities),

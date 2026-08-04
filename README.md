@@ -13,15 +13,19 @@ task or edit the same declared scope.
 2. Export a plan JSON and review it.
 3. Set `approved: true`, then run `ldk-agent sync --approve`.
 4. Agents call `ldk-agent claim` and receive one issue plus a fenced claim token.
-5. Agents heartbeat while working and finish with evidence.
-6. The next claim automatically returns expired In Progress leases to Ready.
+5. A claimed parent is assessed: execute it directly if atomic, or decompose it into 2–7 sub-issues.
+6. Agents execute at most one runnable sub-issue per scheduled run and finish with evidence.
+7. Parent reconciliation moves completed work to In Review or stalled work to Blocked.
+8. The next claim automatically returns expired In Progress leases to Ready.
 
 The active Linear project is [LDKTech Solutions — Agent Operations](https://linear.app/ldktech/project/ldktech-solutions-agent-operations-e48c600c4632). Its immutable ID is pinned in the local config, so a project with a similar name cannot be selected accidentally.
 
 ## Configuration
 
-Copy `config/linear.example.json` to `config/linear.json` and replace every ID with
-the IDs of the new Linear project. The API key is provided only at runtime:
+The active Codex scheduled runner uses the connected Linear OAuth app and does not
+need a personal API key. Copy `config/linear.example.json` to `config/linear.json`
+only when using the standalone CLI or Claude Code outside Codex. In that case, the
+API key is provided only at runtime:
 
 ```sh
 export LINEAR_API_KEY='...'
@@ -29,6 +33,13 @@ export LINEAR_API_KEY='...'
 
 The committed configuration never contains a credential. The project ID, rather
 than a project name or search query, isolates this workflow from historical projects.
+
+## Scheduled runner
+
+The Codex automation `LDK Linear Agent Runner` runs hourly from 08:00 through 22:00
+in `Asia/Ho_Chi_Minh`. It uses the Linear connector, reconciles parent state, focuses
+on an active parent, and executes at most one atomic unit per run. It exits when no
+runnable work exists; there is no resident daemon.
 
 ## Commands
 
@@ -38,6 +49,8 @@ node src/cli.mjs sync --config config/linear.json --plan plan.json --approve
 node src/cli.mjs claim --config config/linear.json --worker codex-local-1 --capabilities sales.research,software.review
 node src/cli.mjs heartbeat --config config/linear.json --token CLAIM_TOKEN
 node src/cli.mjs recover --config config/linear.json
+node src/cli.mjs decompose --config config/linear.json --token CLAIM_TOKEN --plan decomposition.json
+node src/cli.mjs reconcile --config config/linear.json
 node src/cli.mjs finish --config config/linear.json --token CLAIM_TOKEN --outcome review --evidence https://example.com/result
 ```
 
@@ -64,6 +77,21 @@ Manager decisions stay in `Refinement` and do not receive an `ldk-agent` block.
 Resource keys are exact locks. Use the smallest shared scope that would conflict,
 for example `repo:ldktech-solutions:src`, `docs:sales-lead-sop`, or
 `production:ldktech-solutions`.
+
+## Parent and sub-issues
+
+A top-level Ready issue is a parent outcome. After claiming it, decompose it when it
+contains multiple deliverables, capabilities, resources, dependencies, approval
+steps, or more work than one scheduled run. A decomposition contains 2–7 direct
+sub-issues; nested sub-issues are not allowed.
+
+Each sub-issue must be independently verifiable, fit one 30–60 minute run, declare
+its own capabilities/resources, and use `blockedByKeys` for dependencies. Keys are
+stable and project-wide, so retrying a partial decomposition cannot duplicate work.
+
+The scheduler keeps focus on an existing In Progress parent. It executes at most
+one runnable sub-issue per run. When every sub-issue is Done, reconciliation moves
+the parent to In Review for manager acceptance.
 
 ## Coordination boundary
 

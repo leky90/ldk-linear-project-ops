@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { AgentWorkflowError } from "./errors.mjs";
+import { validateDecomposition } from "./decomposition.mjs";
 import { formatTaskDescription, parseTaskMetadata } from "./metadata.mjs";
 import { validatePlan } from "./plan.mjs";
 
@@ -134,6 +135,88 @@ export function createAgentWorkflow({ config, linear, claimStore, clock = () => 
       return recoverExpired();
     },
 
+    async decompose({ token, plan: inputPlan }) {
+      const claim = claimStore.getActive(token);
+      const plan = validateDecomposition(inputPlan);
+      const issues = await linear.listProjectIssues({
+        teamId: config.linear.teamId,
+        projectId: config.linear.projectId,
+      });
+      assertIssueScope(issues, config);
+      const parent = issues.find(({ id }) => id === claim.issueId);
+      if (!parent) throw new AgentWorkflowError("PARENT_NOT_FOUND", "Claimed parent issue was not found in the pinned project");
+      const parentMetadata = parseTaskMetadata(parent.description);
+      if (parentMetadata.kind !== "parent" || parent.parentId) {
+        throw new AgentWorkflowError("DECOMPOSITION_PARENT_REQUIRED", "Only a top-level parent issue can be decomposed");
+      }
+      const existingByKey = new Map();
+      for (const issue of issues) {
+        try {
+          existingByKey.set(parseTaskMetadata(issue.description).key, issue);
+        } catch (error) {
+          if (error.code !== "TASK_METADATA_REQUIRED" && error.code !== "TASK_METADATA_INVALID") throw error;
+        }
+      }
+      const results = [];
+      const childByKey = new Map();
+      for (const child of plan.children) {
+        const existing = existingByKey.get(child.key);
+        if (existing) {
+          if (existing.parentId !== parent.id) {
+            throw new AgentWorkflowError("SUB_ISSUE_KEY_CONFLICT", `Sub-issue key already belongs to another parent: ${child.key}`);
+          }
+          results.push({ key: child.key, created: false, issue: existing });
+          childByKey.set(child.key, existing);
+          continue;
+        }
+        const issue = await linear.createIssue({
+          teamId: config.linear.teamId,
+          projectId: config.linear.projectId,
+          statusId: config.linear.statuses.ready,
+          parentId: parent.id,
+          title: child.title,
+          description: formatTaskDescription(child),
+          ...(child.priority !== undefined ? { priority: child.priority } : {}),
+        });
+        results.push({ key: child.key, created: true, issue });
+        childByKey.set(child.key, issue);
+      }
+      for (const child of plan.children) {
+        const issue = childByKey.get(child.key);
+        for (const blockerKey of child.blockedByKeys) {
+          const blocker = childByKey.get(blockerKey);
+          if (!(issue.blockedByIds ?? []).includes(blocker.id)) {
+            await linear.ensureBlockedBy({ issueId: issue.id, blockerIssueId: blocker.id });
+          }
+        }
+      }
+      if (claim.commentId) {
+        await linear.updateRunComment({
+          commentId: claim.commentId,
+          body: runBody({
+            issue: parent,
+            workerId: claim.workerId,
+            resources: claim.resources,
+            status: "Decomposed — Sub-issues Ready",
+            finishedAt: new Date(clock()).toISOString(),
+            summary: `Created or reused ${results.length} sub-issues. The parent remains In Progress until reconciliation.`,
+          }),
+        });
+      }
+      claimStore.release(token);
+      return {
+        schemaVersion: 1,
+        parentIssueId: parent.id,
+        created: results.filter(({ created }) => created).length,
+        existing: results.filter(({ created }) => !created).length,
+        results,
+      };
+    },
+
+    async reconcileParents() {
+      return reconcileParents();
+    },
+
     async heartbeat({ token, leaseMs = config.defaultLeaseMs }) {
       const claim = claimStore.heartbeat({ token, leaseMs });
       return { schemaVersion: 1, issueId: claim.issueId, expiresAt: claim.expiresAt };
@@ -204,6 +287,58 @@ export function createAgentWorkflow({ config, linear, claimStore, clock = () => 
       claimStore.acknowledgeRecovery(expired.issueId);
     }
     return { schemaVersion: 1, recovered, acknowledged };
+  }
+
+  async function reconcileParents() {
+    const issues = await linear.listProjectIssues({
+      teamId: config.linear.teamId,
+      projectId: config.linear.projectId,
+    });
+    assertIssueScope(issues, config);
+    const byId = new Map(issues.map((issue) => [issue.id, issue]));
+    const childrenByParent = new Map();
+    for (const issue of issues) {
+      if (!issue.parentId || !byId.has(issue.parentId)) continue;
+      const children = childrenByParent.get(issue.parentId) ?? [];
+      children.push(issue);
+      childrenByParent.set(issue.parentId, children);
+    }
+    let reviewed = 0;
+    let blocked = 0;
+    let resumed = 0;
+    for (const [parentId, children] of childrenByParent) {
+      const parent = byId.get(parentId);
+      if ([config.linear.statuses.done, config.linear.statuses.inReview].includes(parent.statusId)) continue;
+      const allDone = children.every(({ statusId }) => statusId === config.linear.statuses.done);
+      const hasProgressPath = children.some(({ statusId }) => [
+        config.linear.statuses.ready,
+        config.linear.statuses.inProgress,
+        config.linear.statuses.inReview,
+      ].includes(statusId));
+      const hasBlocked = children.some(({ statusId }) => statusId === config.linear.statuses.blocked);
+      let statusId;
+      let transition;
+      if (allDone) {
+        statusId = config.linear.statuses.inReview;
+        transition = "All sub-issues are Done; parent moved to In Review.";
+        reviewed += 1;
+      } else if (!hasProgressPath && hasBlocked && parent.statusId !== config.linear.statuses.blocked) {
+        statusId = config.linear.statuses.blocked;
+        transition = "No runnable sub-issues remain; parent moved to Blocked.";
+        blocked += 1;
+      } else if (hasProgressPath && parent.statusId === config.linear.statuses.blocked) {
+        statusId = config.linear.statuses.inProgress;
+        transition = "A runnable sub-issue is available; parent resumed In Progress.";
+        resumed += 1;
+      }
+      if (!statusId) continue;
+      await linear.updateIssueState({ issueId: parentId, statusId });
+      await linear.createRunComment({
+        issueId: parentId,
+        body: `## Parent Reconciliation\n\n${transition}\n\n- Sub-issues: ${children.length}\n- Reconciled: ${new Date(clock()).toISOString()}`,
+      });
+    }
+    return { schemaVersion: 1, reviewed, blocked, resumed };
   }
 }
 

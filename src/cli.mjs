@@ -36,6 +36,10 @@ export async function runCli(argv = process.argv.slice(2), environment = process
       });
     }
     if (command === "recover") return workflow.recoverExpired();
+    if (command === "reconcile") return workflow.reconcileParents();
+    if (command === "decompose") {
+      return workflow.decompose({ token: options.token, plan: await readJson(options.plan) });
+    }
     if (command === "finish") {
       return workflow.finish({
         token: options.token,

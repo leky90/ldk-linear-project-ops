@@ -21,12 +21,22 @@ export function createLinearClient({ apiKey, endpoint = DEFAULT_ENDPOINT, fetchI
       return readIssues({ teamId, projectId, statusId });
     },
 
-    async createIssue({ teamId, projectId, statusId, title, description, priority }) {
+    async createIssue({ teamId, projectId, statusId, title, description, priority, parentId }) {
       const data = await graphql(
         `mutation CreateAgentIssue($input: IssueCreateInput!) {
-          issueCreate(input: $input) { success issue { id identifier url title description priority team { id } project { id } state { id } } }
+          issueCreate(input: $input) { success issue { id identifier url title description priority team { id } project { id } state { id } parent { id } } }
         }`,
-        { input: { teamId, projectId, stateId: statusId, title, description, ...(priority !== undefined ? { priority } : {}) } },
+        {
+          input: {
+            teamId,
+            projectId,
+            stateId: statusId,
+            title,
+            description,
+            ...(parentId ? { parentId } : {}),
+            ...(priority !== undefined ? { priority } : {}),
+          },
+        },
       );
       if (!data.issueCreate?.success) throw new AgentWorkflowError("LINEAR_MUTATION_FAILED", "Linear did not create the issue");
       return normalizeIssue(data.issueCreate.issue);
@@ -62,6 +72,18 @@ export function createLinearClient({ apiKey, endpoint = DEFAULT_ENDPOINT, fetchI
       );
       if (!data.commentUpdate?.success) throw new AgentWorkflowError("LINEAR_MUTATION_FAILED", "Linear did not update run comment");
     },
+
+    async ensureBlockedBy({ issueId, blockerIssueId }) {
+      const data = await graphql(
+        `mutation CreateAgentBlocker($input: IssueRelationCreateInput!) {
+          issueRelationCreate(input: $input) { success }
+        }`,
+        { input: { issueId: blockerIssueId, relatedIssueId: issueId, type: "blocks" } },
+      );
+      if (!data.issueRelationCreate?.success) {
+        throw new AgentWorkflowError("LINEAR_MUTATION_FAILED", "Linear did not create the blocker relation");
+      }
+    },
   };
 
   async function readIssues({ teamId, projectId, statusId }) {
@@ -79,6 +101,7 @@ export function createLinearClient({ apiKey, endpoint = DEFAULT_ENDPOINT, fetchI
             team { id }
             project { id }
             state { id }
+            parent { id }
             relations { nodes { type relatedIssue { id state { type } } } }
           }
         }
@@ -93,6 +116,7 @@ export function createLinearClient({ apiKey, endpoint = DEFAULT_ENDPOINT, fetchI
             team { id }
             project { id }
             state { id }
+            parent { id }
             relations { nodes { type relatedIssue { id state { type } } } }
           }
         }
@@ -107,7 +131,12 @@ export function createLinearClient({ apiKey, endpoint = DEFAULT_ENDPOINT, fetchI
     try {
       response = await fetchImpl(url, {
         method: "POST",
-        headers: { authorization: apiKey, accept: "application/json", "content-type": "application/json" },
+        headers: {
+          authorization: apiKey,
+          accept: "application/json",
+          "content-type": "application/json",
+          "graphql-features": "sub_issues",
+        },
         body: JSON.stringify({ query, variables }),
       });
     } catch (error) {
@@ -125,6 +154,10 @@ export function createLinearClient({ apiKey, endpoint = DEFAULT_ENDPOINT, fetchI
 }
 
 function normalizeIssue(issue) {
+  const blockedByIds = (issue.relations?.nodes ?? [])
+    .filter(({ type }) => type === "blockedBy")
+    .map(({ relatedIssue }) => relatedIssue?.id)
+    .filter(Boolean);
   const blocked = (issue.relations?.nodes ?? []).some(({ type, relatedIssue }) =>
     type === "blockedBy" && !["completed", "canceled"].includes(relatedIssue?.state?.type)
   );
@@ -138,6 +171,8 @@ function normalizeIssue(issue) {
     teamId: issue.team?.id,
     projectId: issue.project?.id,
     statusId: issue.state?.id,
+    parentId: issue.parent?.id ?? null,
+    blockedByIds,
     blocked,
   };
 }

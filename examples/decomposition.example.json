@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "children": [
+    {
+      "key": "parent-key-discovery",
+      "title": "[Discovery] Thu thập và xác minh đầu vào",
+      "description": "Thu thập đầu vào, ghi nguồn và đánh dấu unknown khi chưa có bằng chứng.",
+      "capabilities": ["software.review"],
+      "resources": ["repo:example:discovery"],
+      "blockedByKeys": [],
+      "priority": 2
+    },
+    {
+      "key": "parent-key-delivery",
+      "title": "[Delivery] Tạo kết quả và evidence",
+      "description": "Tạo deliverable cuối và đính kèm evidence có thể kiểm chứng.",
+      "capabilities": ["software.review"],
+      "resources": ["repo:example:delivery"],
+      "blockedByKeys": ["parent-key-discovery"],
+      "priority": 2
+    }
+  ]
+}
