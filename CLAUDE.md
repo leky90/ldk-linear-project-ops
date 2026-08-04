@@ -7,5 +7,5 @@ and finish. A Linear issue being visible is not authorization to work; a valid c
 token is required.
 
 Treat top-level Ready issues as parent outcomes. Follow the complexity and
-decomposition rules in `AGENTS.md`, and execute at most one sub-issue per scheduled
-run.
+decomposition rules in `AGENTS.md`. Keep one focus parent per scheduled run and
+continue through its related runnable sub-issues within the bounded time budget.

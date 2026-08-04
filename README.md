@@ -14,7 +14,7 @@ task or edit the same declared scope.
 3. Set `approved: true`, then run `ldk-agent sync --approve`.
 4. Agents call `ldk-agent claim` and receive one issue plus a fenced claim token.
 5. A claimed parent is assessed: execute it directly if atomic, or decompose it into 2–7 sub-issues.
-6. Agents execute at most one runnable sub-issue per scheduled run and finish with evidence.
+6. Agents execute a bounded chain of runnable sub-issues under one focus parent and finish each with evidence.
 7. Parent reconciliation moves completed work to In Review or stalled work to Blocked.
 8. The next claim automatically returns expired In Progress leases to Ready.
 
@@ -37,9 +37,11 @@ than a project name or search query, isolates this workflow from historical proj
 ## Scheduled runner
 
 The Codex automation `LDK Linear Agent Runner` runs hourly from 08:00 through 22:00
-in `Asia/Ho_Chi_Minh`. It uses the Linear connector, reconciles parent state, focuses
-on an active parent, and executes at most one atomic unit per run. It exits when no
-runnable work exists; there is no resident daemon.
+in `Asia/Ho_Chi_Minh`. It uses the Linear connector, reconciles parent state, selects
+one focus parent, and continues through its runnable dependency chain for up to 50
+minutes. It never switches to an unrelated parent in the same run. It exits when the
+parent reaches In Review/Blocked, no runnable child remains, or the time budget is
+nearly exhausted; there is no resident daemon.
 
 ## Commands
 
@@ -85,13 +87,14 @@ contains multiple deliverables, capabilities, resources, dependencies, approval
 steps, or more work than one scheduled run. A decomposition contains 2–7 direct
 sub-issues; nested sub-issues are not allowed.
 
-Each sub-issue must be independently verifiable, fit one 30–60 minute run, declare
+Each sub-issue must be independently verifiable, normally fit 15–30 minutes, declare
 its own capabilities/resources, and use `blockedByKeys` for dependencies. Keys are
 stable and project-wide, so retrying a partial decomposition cannot duplicate work.
 
-The scheduler keeps focus on an existing In Progress parent. It executes at most
-one runnable sub-issue per run. When every sub-issue is Done, reconciliation moves
-the parent to In Review for manager acceptance.
+The scheduler keeps focus on an existing In Progress parent. After completing one
+sub-issue, it immediately re-reads Linear and continues with the next newly unblocked
+child while the 50-minute run budget remains. When every sub-issue is Done,
+reconciliation moves the parent to In Review for manager acceptance.
 
 ## Coordination boundary
 

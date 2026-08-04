@@ -7,7 +7,7 @@ Nêu parent issue và vai trò của bước này trong kết quả tổng thể
 ## Phạm vi
 
 - Một deliverable duy nhất.
-- Có thể hoàn thành trong một scheduled run khoảng 30–60 phút.
+- Thông thường có thể hoàn thành trong khoảng 15–30 phút để nhiều bước liên quan có thể chạy nối tiếp.
 - Không lặp scope/resource với sub-issue khác trừ khi cần khóa tuần tự.
 
 ## Acceptance criteria

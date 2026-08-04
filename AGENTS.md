@@ -15,9 +15,12 @@ into 2–7 direct sub-issues when it has multiple deliverables, capabilities,
 resources, dependencies, approval steps, or cannot fit one scheduled run. Do not
 create nested sub-issues. Use stable child keys and explicit `blockedByKeys`.
 
-During a scheduled run, execute at most one sub-issue. Prefer the next runnable
-sub-issue under an already In Progress parent before starting another parent. Run
-parent reconciliation at the start and end of the scheduled run.
+During a scheduled run, select exactly one focus parent. Execute its runnable
+sub-issues sequentially in dependency order for up to 50 minutes, re-reading Linear
+after each completion. Stop when the parent reaches In Review/Blocked, no runnable
+child remains, or the next child cannot finish safely in the remaining time. Never
+switch to an unrelated parent in the same run. Run parent reconciliation at the
+start, after each child, and at the end.
 
 For a new goal discussed in chat, draft a plan with `approved: false`. Sync it only
 after the manager explicitly approves it, then require both `approved: true` and the
