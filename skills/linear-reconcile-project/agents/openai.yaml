@@ -1,0 +1,4 @@
+interface:
+  display_name: "Linear Project Reconcile"
+  short_description: "Repair stale claims and reconcile issue states"
+  default_prompt: "Use $linear-reconcile-project to inspect stale claims and reconcile parent, child, and blocker states."

@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { ClaimLockError, ClaimLockStore } from "../claim-lock/store.mjs";
-import { runClaimLockCli } from "../claim-lock/cli.mjs";
+import { ClaimLockError, ClaimLockStore } from "../scripts/claim-lock/store.mjs";
+import { runClaimLockCli } from "../scripts/claim-lock/cli.mjs";
 
 test("competing stores cannot claim the same issue or exact resource", async () => {
   await withStores(({ first, second }) => {
@@ -14,7 +14,7 @@ test("competing stores cannot claim the same issue or exact resource", async () 
       workerId: "codex-1",
       token: "token-1",
       leaseMs: 30_000,
-      resources: ["repo:ldktech-solutions:src"],
+      resources: ["repo:example-product:src"],
     });
     assert.equal(claim.issueId, "issue-1");
     assert.equal(second.tryClaim({
@@ -29,7 +29,7 @@ test("competing stores cannot claim the same issue or exact resource", async () 
       workerId: "codex-2",
       token: "token-3",
       leaseMs: 30_000,
-      resources: ["repo:ldktech-solutions:src"],
+      resources: ["repo:example-product:src"],
     }), null);
   });
 });
@@ -113,7 +113,7 @@ test("one goal-chain worker can hold parent and child leases without duplicating
 });
 
 test("CLI is local-only and returns structured claim lifecycle results", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "ldk-claim-cli-"));
+  const directory = await mkdtemp(join(tmpdir(), "linear-claim-cli-"));
   const database = join(directory, "claims.sqlite");
   try {
     const claimed = await runClaimLockCli([
@@ -139,7 +139,7 @@ test("CLI is local-only and returns structured claim lifecycle results", async (
     assert.equal(released.released.issueId, "issue-1");
     assert.equal("token" in released.released, false);
 
-    const cliSource = await readFile(new URL("../claim-lock/cli.mjs", import.meta.url), "utf8");
+    const cliSource = await readFile(new URL("../scripts/claim-lock/cli.mjs", import.meta.url), "utf8");
     assert.doesNotMatch(cliSource, /LINEAR_API_KEY|fetch\(|createIssue|updateIssue/u);
   } finally {
     await rm(directory, { recursive: true, force: true });
@@ -147,7 +147,7 @@ test("CLI is local-only and returns structured claim lifecycle results", async (
 });
 
 async function withStores(callback, { clock = () => Date.now() } = {}) {
-  const directory = await mkdtemp(join(tmpdir(), "ldk-claim-store-"));
+  const directory = await mkdtemp(join(tmpdir(), "linear-claim-store-"));
   const database = join(directory, "claims.sqlite");
   const first = new ClaimLockStore({ path: database, clock });
   const second = new ClaimLockStore({ path: database, clock });

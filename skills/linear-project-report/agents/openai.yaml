@@ -1,0 +1,4 @@
+interface:
+  display_name: "Linear Project Report"
+  short_description: "Summarize progress, blockers, and priorities"
+  default_prompt: "Use $linear-project-report to produce an evidence-based progress and priority report for this project."

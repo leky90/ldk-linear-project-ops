@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "project": {
+    "slug": "example-project",
+    "name": "Example Project",
+    "linearProjectId": "replace-with-linear-project-id",
+    "linearTeamId": "replace-with-linear-team-id",
+    "historicalProjectIds": []
+  },
+  "workflow": {
+    "states": {
+      "ready": "replace-with-ready-state-id",
+      "inProgress": "replace-with-in-progress-state-id",
+      "inReview": "replace-with-in-review-state-id",
+      "blocked": "replace-with-blocked-state-id",
+      "done": "replace-with-done-state-id"
+    },
+    "labels": {
+      "parent": "agent:parent",
+      "subIssue": "agent:sub-issue",
+      "decision": "manager:decision"
+    }
+  },
+  "coordination": {
+    "mode": "atomic-local-lease",
+    "databasePath": ".linear-ops/claims.sqlite",
+    "leaseMinutes": 30,
+    "heartbeatMinutes": 10,
+    "runBudgetMinutes": 50
+  }
+}

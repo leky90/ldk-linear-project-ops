@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "kind": "linear-parent-decomposition",
+  "projectId": "project-1",
+  "approved": false,
+  "parent": {
+    "key": "demo.parent.onboarding",
+    "issueId": "ISSUE-1"
+  },
+  "complexitySignals": ["multiple deliverables", "dependency chain"],
+  "children": [
+    {
+      "key": "demo.child.collect",
+      "title": "Collect source data",
+      "description": "Collect the approved snapshot.",
+      "status": "Ready",
+      "acceptanceCriteria": ["Evidence URI is recorded."],
+      "capabilities": ["analytics.audit"],
+      "resources": ["docs:onboarding-source"],
+      "blockedByKeys": [],
+      "claimable": true
+    },
+    {
+      "key": "demo.child.report",
+      "title": "Publish baseline report",
+      "description": "Summarize the snapshot.",
+      "status": "Blocked",
+      "acceptanceCriteria": ["Report cites its source."],
+      "capabilities": ["analytics.reporting"],
+      "resources": ["docs:onboarding-baseline"],
+      "blockedByKeys": ["demo.child.collect"],
+      "claimable": true
+    }
+  ]
+}

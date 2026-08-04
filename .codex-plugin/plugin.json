@@ -1,0 +1,27 @@
+{
+  "name": "ldk-linear-project-ops",
+  "version": "0.1.0+codex.20260804160430",
+  "description": "Reusable closed-loop Linear planning, coordination, execution, reconciliation, and reporting for Codex and Claude Code.",
+  "author": {
+    "name": "LDKTech Solutions"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Linear Project Ops",
+    "shortDescription": "Plan, coordinate, execute, and report work in Linear.",
+    "longDescription": "A reusable guarded workflow for turning discussions into approved Linear plans, decomposing goals, coordinating concurrent agents, executing bounded goal chains, reconciling state, and reporting project health.",
+    "developerName": "LDKTech Solutions",
+    "category": "Productivity",
+    "capabilities": [
+      "Linear planning",
+      "Issue triage",
+      "Agent coordination",
+      "Project reporting"
+    ],
+    "defaultPrompt": [
+      "Capture this brainstorm as a Linear plan for review.",
+      "Claim and execute the next safe goal chain.",
+      "Report project progress, blockers, and priorities."
+    ]
+  }
+}

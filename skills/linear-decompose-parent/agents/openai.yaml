@@ -1,0 +1,4 @@
+interface:
+  display_name: "Linear Parent Decomposition"
+  short_description: "Break complex parent issues into safe sub-issues"
+  default_prompt: "Use $linear-decompose-parent to assess this parent and draft an executable sub-issue DAG."

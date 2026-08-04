@@ -121,13 +121,13 @@ function publicClaim({ token: _token, ...claim }) {
 function usage() {
   return [
     "Usage:",
-    "  ldk-claim-lock claim --database PATH --issue-id ID --worker ID [--resources a,b] [--lease-ms MS]",
-    "  ldk-claim-lock heartbeat --database PATH --token TOKEN [--lease-ms MS]",
-    "  ldk-claim-lock verify --database PATH --token TOKEN",
-    "  ldk-claim-lock release --database PATH --token TOKEN",
-    "  ldk-claim-lock active --database PATH",
-    "  ldk-claim-lock expired --database PATH",
-    "  ldk-claim-lock acknowledge --database PATH --issue-id ID",
+    "  linear-claim-lock claim --database PATH --issue-id ID --worker ID [--resources a,b] [--lease-ms MS]",
+    "  linear-claim-lock heartbeat --database PATH --token TOKEN [--lease-ms MS]",
+    "  linear-claim-lock verify --database PATH --token TOKEN",
+    "  linear-claim-lock release --database PATH --token TOKEN",
+    "  linear-claim-lock active --database PATH",
+    "  linear-claim-lock expired --database PATH",
+    "  linear-claim-lock acknowledge --database PATH --issue-id ID",
   ].join("\n");
 }
 

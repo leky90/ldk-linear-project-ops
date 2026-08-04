@@ -1,0 +1,80 @@
+{
+  "asOf": "2026-08-04T12:00:00.000Z",
+  "project": {
+    "id": "project-1",
+    "name": "Demo Operations",
+    "url": "https://linear.app/example/project/demo"
+  },
+  "milestones": [
+    {
+      "key": "demo.milestone.onboarding",
+      "name": "Onboarding baseline",
+      "targetDate": "2026-08-10",
+      "url": "https://linear.app/example/milestone/onboarding"
+    }
+  ],
+  "measurementGaps": ["Activation baseline is unknown"],
+  "issues": [
+    {
+      "key": "demo.parent.onboarding",
+      "kind": "parent",
+      "title": "Establish onboarding baseline",
+      "status": "In Progress",
+      "priority": "high",
+      "milestoneKey": "demo.milestone.onboarding",
+      "updatedAt": "2026-08-04T08:00:00.000Z",
+      "resources": ["docs:onboarding-baseline"],
+      "claim": {
+        "runId": "run-expired",
+        "expiresAt": "2026-08-04T10:00:00.000Z"
+      }
+    },
+    {
+      "key": "demo.child.collect",
+      "kind": "sub-issue",
+      "parentKey": "demo.parent.onboarding",
+      "title": "Collect source data",
+      "status": "Done",
+      "priority": "high",
+      "milestoneKey": "demo.milestone.onboarding",
+      "updatedAt": "2026-08-04T09:00:00.000Z"
+    },
+    {
+      "key": "demo.child.report",
+      "kind": "sub-issue",
+      "parentKey": "demo.parent.onboarding",
+      "title": "Publish baseline report",
+      "status": "Ready",
+      "priority": "high",
+      "priorityRationale": "Completes the current parent outcome.",
+      "milestoneKey": "demo.milestone.onboarding",
+      "blockedByKeys": ["demo.child.collect"],
+      "updatedAt": "2026-08-04T10:00:00.000Z"
+    },
+    {
+      "key": "demo.decision.metric",
+      "kind": "decision",
+      "title": "Choose activation metric",
+      "status": "Refinement",
+      "priority": "normal",
+      "labels": ["manager:decision"],
+      "updatedAt": "2026-08-01T09:00:00.000Z"
+    },
+    {
+      "key": "demo.blocked.integration",
+      "kind": "parent",
+      "title": "Verify external integration",
+      "status": "Blocked",
+      "priority": "normal",
+      "updatedAt": "2026-08-01T09:00:00.000Z"
+    },
+    {
+      "key": "demo.canceled.old",
+      "kind": "parent",
+      "title": "Superseded baseline",
+      "status": "Canceled",
+      "priority": "low",
+      "updatedAt": "2026-07-01T09:00:00.000Z"
+    }
+  ]
+}

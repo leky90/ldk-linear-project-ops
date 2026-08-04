@@ -1,4 +1,6 @@
 node_modules/
+/.linear-project-ops.json
+/.linear-ops/
 .state/
 *.sqlite
 *.sqlite-shm

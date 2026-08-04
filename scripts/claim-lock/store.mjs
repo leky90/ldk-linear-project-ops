@@ -10,6 +10,7 @@ export class ClaimLockError extends Error {
   }
 }
 
+/** Atomic issue and exact-resource leases for agents sharing one filesystem. */
 export class ClaimLockStore {
   constructor({ path, clock = () => Date.now() } = {}) {
     assertText(path, "database path");

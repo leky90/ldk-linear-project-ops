@@ -1,5 +1,5 @@
 {
-  "name": "ldk-local-claim-lock",
+  "name": "ldk-linear-project-ops",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -7,11 +7,11 @@
     "node": ">=24"
   },
   "bin": {
-    "ldk-claim-lock": "./claim-lock/cli.mjs"
+    "linear-claim-lock": "./scripts/claim-lock/cli.mjs"
   },
   "scripts": {
-    "test": "node --test test/*.test.mjs",
-    "lint": "node --check claim-lock/*.mjs test/*.test.mjs",
+    "test": "node --test test/*.test.mjs tests/run-tests.mjs",
+    "lint": "node --check scripts/*.mjs scripts/claim-lock/*.mjs test/*.test.mjs tests/run-tests.mjs",
     "check": "npm run lint && npm test"
   }
 }

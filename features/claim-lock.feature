@@ -1,8 +1,8 @@
-Feature: Local atomic claim lock for Codex agents
+Feature: Local atomic claim lock for Linear operation agents
 
-  The Linear plugin owns planning and state changes through OAuth.
-  The repository provides only a local SQLite lease so agents sharing this
-  workspace cannot claim the same issue or exact resource at the same time.
+  The plugin owns planning and state changes through a connected Linear OAuth app.
+  Its packaged SQLite lease prevents agents sharing one consumer workspace from
+  claiming the same issue or exact resource at the same time.
 
   Scenario: Competing agents claim the same issue
     Given one agent holds an unexpired claim for a Linear issue

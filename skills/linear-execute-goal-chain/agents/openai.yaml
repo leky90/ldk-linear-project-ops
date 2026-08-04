@@ -1,0 +1,4 @@
+interface:
+  display_name: "Linear Goal Chain"
+  short_description: "Execute related sub-issues in one bounded run"
+  default_prompt: "Use $linear-execute-goal-chain to complete a bounded chain of related sub-issues under one parent."

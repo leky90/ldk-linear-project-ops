@@ -1,0 +1,4 @@
+interface:
+  display_name: "Linear Focus Claim"
+  short_description: "Claim one safe focus parent without conflicts"
+  default_prompt: "Use $linear-claim-focus to select and atomically claim one safe focus parent and its next child."
