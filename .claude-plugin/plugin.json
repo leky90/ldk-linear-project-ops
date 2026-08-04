@@ -1,0 +1,16 @@
+{
+  "name": "ldk-linear-project-ops",
+  "version": "0.2.0",
+  "description": "Reusable closed-loop Linear planning, coordination, execution, reconciliation, and reporting for Codex and Claude Code.",
+  "author": {
+    "name": "LDKTech Solutions"
+  },
+  "license": "UNLICENSED",
+  "keywords": [
+    "linear",
+    "project-operations",
+    "agent-coordination",
+    "planning",
+    "reporting"
+  ]
+}

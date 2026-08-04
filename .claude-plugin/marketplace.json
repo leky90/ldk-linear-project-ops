@@ -1,0 +1,15 @@
+{
+  "name": "ldk-linear-project-ops-local",
+  "description": "Local development marketplace for LDK Linear Project Ops.",
+  "owner": {
+    "name": "LDKTech Solutions"
+  },
+  "plugins": [
+    {
+      "name": "ldk-linear-project-ops",
+      "source": "./",
+      "description": "Closed-loop Linear planning and agent coordination for Claude Code.",
+      "version": "0.2.0"
+    }
+  ]
+}

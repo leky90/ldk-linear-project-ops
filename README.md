@@ -11,6 +11,8 @@ does not bind to or operate any real Linear project.
 ## Plugin contents
 
 - `.codex-plugin/plugin.json`: Codex plugin manifest.
+- `.claude-plugin/plugin.json`: Claude Code plugin manifest.
+- `.claude-plugin/marketplace.json`: local Claude Code marketplace.
 - `skills/`: nine composable Linear operation skills.
 - `references/`: approval, data model, priority, decomposition, host, and claim rules.
 - `schemas/`: project binding, planning, and decomposition contracts.
@@ -33,16 +35,34 @@ is project state, not plugin source, and must remain uncommitted.
 The plugin accesses Linear through the host's connected OAuth app. It does not read
 `LINEAR_API_KEY` and does not include a Linear API client.
 
+## Claude Code setup
+
+Add this repository as a local marketplace and install the plugin:
+
+```sh
+claude plugin marketplace add /absolute/path/to/ldk-linear-project-ops
+claude plugin install ldk-linear-project-ops@ldk-linear-project-ops-local --scope user
+```
+
+Connect Claude Code to Linear's official OAuth MCP server:
+
+```sh
+claude mcp add --transport http linear-server https://mcp.linear.app/mcp
+```
+
+Open a new Claude Code session and run `/mcp` once to complete OAuth. The plugin
+automatically discovers `skills/` and `hooks/hooks.json`; no API key is required.
+
 ## Development
 
 ```sh
 npm run check
 ```
 
-Validate the plugin package with the Codex plugin-creator validator and validate
-each skill with the skill-creator validator before reinstalling. Use the
-cachebuster/reinstall flow for local development so new Codex tasks load the updated
-skills.
+Validate the plugin package with both `claude plugin validate --strict .` and the
+Codex plugin-creator validator, then validate each skill with the skill-creator
+validator before reinstalling. Use the Codex cachebuster/reinstall flow for local
+development and `claude plugin update` after publishing a Claude marketplace update.
 
 ## Boundary
 

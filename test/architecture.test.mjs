@@ -10,11 +10,22 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 
 test("repository is the canonical reusable plugin source", async () => {
   const manifest = JSON.parse(await readFile(join(root, ".codex-plugin", "plugin.json"), "utf8"));
+  const claudeManifest = JSON.parse(await readFile(join(root, ".claude-plugin", "plugin.json"), "utf8"));
+  const claudeMarketplace = JSON.parse(await readFile(join(root, ".claude-plugin", "marketplace.json"), "utf8"));
   const packageJson = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
   assert.equal(manifest.name, "ldk-linear-project-ops");
+  assert.equal(claudeManifest.name, manifest.name);
   assert.equal(packageJson.name, manifest.name);
+  assert.equal(manifest.version.split("+")[0], packageJson.version);
+  assert.equal(claudeManifest.version, packageJson.version);
+  assert.equal(claudeMarketplace.name, "ldk-linear-project-ops-local");
+  assert.deepEqual(claudeMarketplace.plugins.map(({ name, source, version }) => ({ name, source, version })), [{
+    name: manifest.name,
+    source: "./",
+    version: packageJson.version,
+  }]);
   assert.deepEqual(packageJson.bin, { "linear-claim-lock": "./scripts/claim-lock/cli.mjs" });
-  for (const required of ["skills", "references", "schemas", "scripts", "assets", "examples", "tests"]) {
+  for (const required of ["skills", "references", "schemas", "scripts", "assets", "examples", "tests", "hooks/hooks.json"]) {
     await access(join(root, required));
   }
 });

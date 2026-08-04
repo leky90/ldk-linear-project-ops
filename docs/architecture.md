@@ -3,7 +3,9 @@
 ## Source layer
 
 The repository contains reusable plugin instructions, deterministic scripts,
-schemas, templates, and tests. `.codex-plugin/plugin.json` is the package manifest.
+schemas, templates, and tests. `.codex-plugin/plugin.json` packages Codex and
+`.claude-plugin/plugin.json` packages Claude Code. Both hosts share the same
+`skills/`, `hooks/`, scripts, schemas, references, and assets.
 
 ## Consumer layer
 
@@ -14,7 +16,9 @@ that file before Linear work. No consumer binding belongs in this source reposit
 ## Host layer
 
 Codex or Claude provides authenticated Linear OAuth tools and optionally schedules
-runs. Host automation is deployment state and is not packaged with the plugin.
+runs. Claude Code connects to Linear's official remote MCP endpoint and completes
+OAuth interactively. Host automation and OAuth state are deployment state and are
+not packaged with the plugin.
 
 ## Coordination layer
 

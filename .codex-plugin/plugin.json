@@ -1,6 +1,6 @@
 {
   "name": "ldk-linear-project-ops",
-  "version": "0.1.0+codex.20260804160430",
+  "version": "0.2.0+codex.20260804180546",
   "description": "Reusable closed-loop Linear planning, coordination, execution, reconciliation, and reporting for Codex and Claude Code.",
   "author": {
     "name": "LDKTech Solutions"
