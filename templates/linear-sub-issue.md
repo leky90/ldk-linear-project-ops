@@ -15,6 +15,13 @@ Nêu parent issue và vai trò của bước này trong kết quả tổng thể
 - Kết quả có thể kiểm chứng độc lập.
 - Có URI evidence trước khi chuyển Done.
 
+## Dependencies
+
+- Blocked by stable keys:
+
 ```ldk-agent
 {"key":"parent-key-atomic-step","kind":"sub-issue","claimable":true,"capabilities":["software.review"],"resources":["repo:exact-child-scope"]}
 ```
+
+Khối `ldk-agent` là metadata cho plugin, không phải lệnh CLI. Giữ child ở
+**Blocked** khi `blockedByKeys` chưa hoàn thành; chỉ chuyển **Ready** khi runnable.

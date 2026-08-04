@@ -1,103 +1,75 @@
-# LDK Agent Workflow
+# LDK Codex-native Project Operations
 
-A small Linear-first coordination workflow for local Codex and Claude sessions.
+This repository binds LDKTech Solutions to one immutable Linear project and provides
+an atomic local claim lock for concurrent Codex/Claude sessions.
 
-It intentionally has no dependency on the previous `ldk-work-os` implementation.
-Linear stores work and visible progress. A local SQLite file stores only short-lived
-claim leases and exact resource locks so concurrent sessions cannot claim the same
-task or edit the same declared scope.
+Planning, triage, decomposition, Linear writes, reconciliation, and reporting belong
+to the installed `ldk-linear-project-ops` plugin. Linear access uses the host's OAuth
+connector. This repository has no Linear API client, no resident daemon, and no
+second plan schema.
 
-## Workflow
+## Components
 
-1. Discuss a goal in Codex or Claude.
-2. Export a plan JSON and review it.
-3. Set `approved: true`, then run `ldk-agent sync --approve`.
-4. Agents call `ldk-agent claim` and receive one issue plus a fenced claim token.
-5. A claimed parent is assessed: execute it directly if atomic, or decompose it into 2–7 sub-issues.
-6. Agents execute a bounded chain of runnable sub-issues under one focus parent and finish each with evidence.
-7. Parent reconciliation moves completed work to In Review or stalled work to Blocked.
-8. The next claim automatically returns expired In Progress leases to Ready.
+- [`.ldk-linear-project.json`](.ldk-linear-project.json): immutable project/team,
+  workflow labels/states, and coordination policy.
+- [`claim-lock/`](claim-lock): local SQLite issue/resource leases only.
+- [`AGENTS.md`](AGENTS.md): mandatory workflow for Codex and Claude Code.
+- [`templates/`](templates): managed Linear issue descriptions.
+- [`docs/codex-native-architecture.md`](docs/codex-native-architecture.md): scope
+  and architectural decision.
 
-The active Linear project is [LDKTech Solutions — Agent Operations](https://linear.app/ldktech/project/ldktech-solutions-agent-operations-e48c600c4632). Its immutable ID is pinned in the local config, so a project with a similar name cannot be selected accidentally.
+## Closed-loop workflow
 
-## Configuration
+1. Load project context from the immutable binding.
+2. Turn brainstorming into an unapproved plugin plan.
+3. Preview and obtain explicit manager approval.
+4. Apply the approved plan through Linear OAuth.
+5. Triage/decompose complex outcomes into 2–7 direct sub-issues.
+6. Select one focus parent and acquire a local claim lease.
+7. Execute a bounded chain of related children with evidence.
+8. Reconcile parent, child, blocker, and expired-claim state.
+9. Report milestone health, progress, decisions, blockers, and priority.
 
-The active Codex scheduled runner uses the connected Linear OAuth app and does not
-need a personal API key. Copy `config/linear.example.json` to `config/linear.json`
-only when using the standalone CLI or Claude Code outside Codex. In that case, the
-API key is provided only at runtime:
+## Claim-lock commands
 
 ```sh
-export LINEAR_API_KEY='...'
+node claim-lock/cli.mjs claim \
+  --database .state/claims.sqlite \
+  --issue-id LINEAR_ISSUE_UUID \
+  --worker codex-local-1 \
+  --resources repo:ldktech-solutions:scope \
+  --lease-ms 1800000
+
+node claim-lock/cli.mjs heartbeat \
+  --database .state/claims.sqlite \
+  --token CLAIM_TOKEN \
+  --lease-ms 1800000
+
+node claim-lock/cli.mjs verify --database .state/claims.sqlite --token CLAIM_TOKEN
+node claim-lock/cli.mjs release --database .state/claims.sqlite --token CLAIM_TOKEN
+node claim-lock/cli.mjs active --database .state/claims.sqlite
+node claim-lock/cli.mjs expired --database .state/claims.sqlite
+node claim-lock/cli.mjs acknowledge --database .state/claims.sqlite --issue-id LINEAR_ISSUE_UUID
 ```
 
-The committed configuration never contains a credential. The project ID, rather
-than a project name or search query, isolates this workflow from historical projects.
+The token is a local fencing token. Never copy it into Linear or commit it.
+
+During a goal chain, hold the parent lease for the full run and acquire one child
+lease at a time. Omit child resource keys already protected by the parent token so
+the run does not conflict with itself. Check `active` before reconciling an expired
+claim.
 
 ## Scheduled runner
 
-The Codex automation `LDK Linear Agent Runner` runs hourly from 08:00 through 22:00
-in `Asia/Ho_Chi_Minh`. It uses the Linear connector, reconciles parent state, selects
-one focus parent, and continues through its runnable dependency chain for up to 50
-minutes. It never switches to an unrelated parent in the same run. It exits when the
-parent reaches In Review/Blocked, no runnable child remains, or the time budget is
-nearly exhausted; there is no resident daemon.
+`LDK Linear Agent Runner` runs hourly from 08:00 through 22:00
+`Asia/Ho_Chi_Minh`. It uses the plugin, Linear OAuth, and this local claim-lock.
+Each run stays on one focus parent for up to 50 minutes; it is not a daemon.
 
-## Commands
+## Verification
 
 ```sh
-node src/cli.mjs plan-check --config config/linear.json --plan plan.json
-node src/cli.mjs sync --config config/linear.json --plan plan.json --approve
-node src/cli.mjs claim --config config/linear.json --worker codex-local-1 --capabilities sales.research,software.review
-node src/cli.mjs heartbeat --config config/linear.json --token CLAIM_TOKEN
-node src/cli.mjs recover --config config/linear.json
-node src/cli.mjs decompose --config config/linear.json --token CLAIM_TOKEN --plan decomposition.json
-node src/cli.mjs reconcile --config config/linear.json
-node src/cli.mjs finish --config config/linear.json --token CLAIM_TOKEN --outcome review --evidence https://example.com/result
+npm run check
 ```
 
-All commands print JSON for easy use from Codex and Claude.
-
-## Chat approval contract
-
-When a session turns a discussion into work, it must:
-
-1. Draft a schema-version-1 plan with `approved: false`.
-2. Show the scope, acceptance criteria, capabilities, and exclusive resources to the manager.
-3. Wait for explicit approval in chat.
-4. Change `approved` to `true` and call `sync --approve`.
-
-Both approval signals are required. Re-running the same plan is safe because each
-item has a stable `key` and sync is idempotent within the pinned project.
-
-## Direct Linear tasks
-
-A manager can create an issue directly in Linear. To make it claimable, put it in
-`Ready` and append the metadata block from `templates/linear-agent-task.md`.
-Manager decisions stay in `Refinement` and do not receive an `ldk-agent` block.
-
-Resource keys are exact locks. Use the smallest shared scope that would conflict,
-for example `repo:ldktech-solutions:src`, `docs:sales-lead-sop`, or
-`production:ldktech-solutions`.
-
-## Parent and sub-issues
-
-A top-level Ready issue is a parent outcome. After claiming it, decompose it when it
-contains multiple deliverables, capabilities, resources, dependencies, approval
-steps, or more work than one scheduled run. A decomposition contains 2–7 direct
-sub-issues; nested sub-issues are not allowed.
-
-Each sub-issue must be independently verifiable, normally fit 15–30 minutes, declare
-its own capabilities/resources, and use `blockedByKeys` for dependencies. Keys are
-stable and project-wide, so retrying a partial decomposition cannot duplicate work.
-
-The scheduler keeps focus on an existing In Progress parent. After completing one
-sub-issue, it immediately re-reads Linear and continues with the next newly unblocked
-child while the 50-minute run budget remains. When every sub-issue is Done,
-reconciliation moves the parent to In Review for manager acceptance.
-
-## Coordination boundary
-
-The SQLite claim database coordinates sessions that share this workspace. Agents
-running on different machines must use a shared claim service/database before they
-are allowed to claim concurrently; Linear status changes alone are not an atomic lock.
+The lock coordinates only agents sharing this SQLite database. Use a shared lease
+service before allowing agents on multiple machines to execute concurrently.

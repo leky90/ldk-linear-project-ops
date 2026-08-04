@@ -1,5 +1,5 @@
 {
-  "name": "ldk-agent-workflow",
+  "name": "ldk-local-claim-lock",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -7,11 +7,11 @@
     "node": ">=24"
   },
   "bin": {
-    "ldk-agent": "./src/cli.mjs"
+    "ldk-claim-lock": "./claim-lock/cli.mjs"
   },
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "lint": "node --check src/*.mjs test/*.test.mjs",
+    "lint": "node --check claim-lock/*.mjs test/*.test.mjs",
     "check": "npm run lint && npm test"
   }
 }

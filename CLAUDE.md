@@ -1,11 +1,12 @@
-# Claude instructions
+# Claude Code instructions
 
-Read and follow `AGENTS.md` before planning or claiming work.
+Read and follow `AGENTS.md` before planning, claiming, or executing work.
 
-Use `node src/cli.mjs` for plan validation, Linear sync, claim, heartbeat, recovery,
-and finish. A Linear issue being visible is not authorization to work; a valid claim
-token is required.
+Use the installed `ldk-linear-project-ops` skills and connected Linear OAuth tools
+for all project operations. Do not create a local plan schema, call a Linear API
+directly, or request `LINEAR_API_KEY`.
 
-Treat top-level Ready issues as parent outcomes. Follow the complexity and
-decomposition rules in `AGENTS.md`. Keep one focus parent per scheduled run and
-continue through its related runnable sub-issues within the bounded time budget.
+Before editing any project resource, acquire a token with
+`node claim-lock/cli.mjs claim`. Heartbeat during work and release on every stop
+path. Keep one focus parent per run and continue only through its related runnable
+children within the configured time budget.

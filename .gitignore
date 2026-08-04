@@ -4,4 +4,4 @@ node_modules/
 *.sqlite-shm
 *.sqlite-wal
 .env
-config/linear.json
+.DS_Store

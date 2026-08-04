@@ -16,8 +16,18 @@ Mô tả một kết quả độc lập mà một agent có thể hoàn thành.
 - Tiêu chí kiểm chứng thứ hai.
 - Evidence cần nộp trước khi chuyển In Review/Done.
 
+## Priority rationale
+
+- Nêu bằng chứng cho priority hiện tại; dùng `measurement-required` khi thiếu baseline.
+
+## Dependencies and decisions
+
+- Blocked by:
+- Manager decision:
+
 ```ldk-agent
 {"key":"stable-unique-key","kind":"parent","claimable":true,"capabilities":["software.review"],"resources":["repo:exact-conflict-scope"]}
 ```
 
-Đặt issue ở **Ready** chỉ khi nội dung đã đủ rõ để agent tự thực hiện.
+Khối `ldk-agent` là metadata cho plugin, không phải lệnh CLI. Đặt issue ở
+**Ready** chỉ khi nội dung đã đủ rõ, không blocked và không cần manager decision.
