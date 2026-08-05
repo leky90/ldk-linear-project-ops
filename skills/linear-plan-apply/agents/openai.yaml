@@ -1,4 +1,0 @@
-interface:
-  display_name: "Linear Plan Apply"
-  short_description: "Preview and apply an approved Linear plan"
-  default_prompt: "Use $linear-plan-apply to preview this plan and apply it idempotently after approval."

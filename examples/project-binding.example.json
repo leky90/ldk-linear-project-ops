@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "project": {
     "slug": "example-project",
     "name": "Example Project",
@@ -9,31 +9,25 @@
   },
   "workflow": {
     "states": {
+      "refinement": "replace-with-refinement-state-id",
       "ready": "replace-with-ready-state-id",
       "inProgress": "replace-with-in-progress-state-id",
       "inReview": "replace-with-in-review-state-id",
       "blocked": "replace-with-blocked-state-id",
       "done": "replace-with-done-state-id"
     },
-    "labels": {
-      "parent": "agent:parent",
-      "subIssue": "agent:sub-issue",
-      "decision": "manager:decision"
-    },
-    "softwareDelivery": {
-      "agentActions": ["commit", "push", "open-pull-request", "mark-pull-request-ready"],
-      "childDoneRequires": ["acceptance-criteria", "scoped-changes-accounted", "git-baseline", "worktree-isolated", "scope-clean", "commit"],
-      "reviewRequires": ["acceptance-criteria", "scoped-changes-accounted", "git-baseline", "worktree-isolated", "scope-clean", "commit", "push", "pull-request", "non-draft-pull-request", "ci"],
-      "doneRequires": ["manager-acceptance", "acceptance-after-last-delivery", "merge"],
-      "deployment": "when-required",
-      "worktreeIsolation": "required"
+    "roles": {
+      "cpo": { "label": "role:cpo", "defaultReviewer": "tech-lead" },
+      "product-manager": { "label": "role:product-manager", "defaultReviewer": "cpo" },
+      "tech-lead": { "label": "role:tech-lead", "defaultReviewer": "cpo" },
+      "software-engineer": { "label": "role:software-engineer", "defaultReviewer": "qa" },
+      "qa": { "label": "role:qa", "defaultReviewer": "tech-lead" },
+      "content-director": { "label": "role:content-director", "defaultReviewer": "cpo" },
+      "content-writer": { "label": "role:content-writer", "defaultReviewer": "content-director" },
+      "marketing-lead": { "label": "role:marketing-lead", "defaultReviewer": "cpo" },
+      "marketer": { "label": "role:marketer", "defaultReviewer": "marketing-lead" },
+      "sales-manager": { "label": "role:sales-manager", "defaultReviewer": "cpo" },
+      "sales-representative": { "label": "role:sales-representative", "defaultReviewer": "sales-manager" }
     }
-  },
-  "coordination": {
-    "mode": "atomic-local-lease",
-    "databasePath": ".linear-ops/claims.sqlite",
-    "leaseMinutes": 30,
-    "heartbeatMinutes": 10,
-    "runBudgetMinutes": 50
   }
 }

@@ -8,67 +8,73 @@ import { validateProjectBinding } from "../scripts/lib.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 
-test("repository is the canonical reusable plugin source", async () => {
-  const manifest = JSON.parse(await readFile(join(root, ".codex-plugin", "plugin.json"), "utf8"));
-  const claudeManifest = JSON.parse(await readFile(join(root, ".claude-plugin", "plugin.json"), "utf8"));
-  const claudeMarketplace = JSON.parse(await readFile(join(root, ".claude-plugin", "marketplace.json"), "utf8"));
+test("package exposes the same v1 plugin for Codex and Claude Code", async () => {
+  const codex = JSON.parse(await readFile(join(root, ".codex-plugin", "plugin.json"), "utf8"));
+  const claude = JSON.parse(await readFile(join(root, ".claude-plugin", "plugin.json"), "utf8"));
+  const marketplace = JSON.parse(await readFile(join(root, ".claude-plugin", "marketplace.json"), "utf8"));
   const packageJson = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
-  assert.equal(manifest.name, "ldk-linear-project-ops");
-  assert.equal(claudeManifest.name, manifest.name);
-  assert.equal(packageJson.name, manifest.name);
-  assert.equal(manifest.version.split("+")[0], packageJson.version);
-  assert.equal(claudeManifest.version, packageJson.version);
-  assert.equal(claudeMarketplace.name, "ldk-linear-project-ops-local");
-  assert.deepEqual(claudeMarketplace.plugins.map(({ name, source, version }) => ({ name, source, version })), [{
-    name: manifest.name,
-    source: "./",
-    version: packageJson.version,
-  }]);
-  assert.deepEqual(packageJson.bin, { "linear-claim-lock": "./scripts/claim-lock/cli.mjs" });
-  for (const required of ["skills", "references", "schemas", "scripts", "assets", "examples", "tests", "hooks/hooks.json"]) {
-    await access(join(root, required));
-  }
-  for (const required of [
-    "references/software-delivery-policy.md",
-    "schemas/git-worktree-baseline.schema.json",
-    "schemas/software-delivery-evidence.schema.json",
-    "scripts/capture-git-baseline.mjs",
-    "scripts/git-delivery-state.mjs",
-    "scripts/validate-software-delivery.mjs",
-    "tests/fixtures/valid-software-delivery.json",
-  ]) {
-    await access(join(root, required));
+  assert.equal(packageJson.name, "ldk-linear-project-ops");
+  assert.equal(packageJson.version, "1.0.0");
+  assert.equal(codex.name, packageJson.name);
+  assert.equal(codex.version.split("+")[0], packageJson.version);
+  assert.equal(claude.name, packageJson.name);
+  assert.equal(claude.version, packageJson.version);
+  assert.equal(marketplace.plugins[0].version, packageJson.version);
+  assert.equal(packageJson.bin, undefined);
+});
+
+test("plugin has four role-oriented public skills", async () => {
+  const skills = (await readdir(join(root, "skills"), { withFileTypes: true }))
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+  assert.deepEqual(skills, ["linear-create-work", "linear-do-issue", "linear-project-status", "linear-reconcile"]);
+  for (const skill of skills) {
+    await access(join(root, "skills", skill, "SKILL.md"));
+    await access(join(root, "skills", skill, "agents", "openai.yaml"));
   }
 });
 
-test("source repository contains no live project binding", async () => {
+test("old SQLite claim engine and automation-era schemas are removed", async () => {
   for (const relative of [
-    ".linear-project-ops.json",
-    ".ldk-linear-project.json",
-    "config/linear.json",
-    ".state/claims.sqlite",
-    ".linear-ops/claims.sqlite",
-  ]) {
-    await assert.rejects(access(join(root, relative)));
-  }
+    "scripts/claim-lock/cli.mjs",
+    "scripts/claim-lock/store.mjs",
+    "features/claim-lock.feature",
+    "schemas/brainstorm-plan.schema.json",
+    "schemas/decomposition.schema.json",
+    "schemas/software-delivery-evidence.schema.json",
+    "scripts/validate-plan.mjs",
+    "scripts/validate-software-delivery.mjs",
+  ]) await assert.rejects(access(join(root, relative)));
+  for (const relative of [
+    "schemas/project-binding.schema.json",
+    "schemas/work-plan.schema.json",
+    "schemas/handoff.schema.json",
+    "schemas/git-worktree-baseline.schema.json",
+    "scripts/validate-work-plan.mjs",
+    "scripts/validate-handoff.mjs",
+    "scripts/render-work-comment.mjs",
+    "scripts/work-lock.mjs",
+  ]) await access(join(root, relative));
+});
 
+test("source repository contains no live project binding or credentials", async () => {
+  for (const relative of [".linear-project-ops.json", ".linear-ops", ".state"]) await assert.rejects(access(join(root, relative)));
   const example = JSON.parse(await readFile(join(root, "examples", "project-binding.example.json"), "utf8"));
   assert.deepEqual(validateProjectBinding(example, { allowPlaceholders: true }), []);
   assert.match(validateProjectBinding(example).join("\n"), /placeholder/u);
-});
-
-test("plugin source excludes the former LDKTech operations binding", async () => {
   const files = await listSourceFiles(root);
   const content = (await Promise.all(files.map((path) => readFile(path, "utf8")))).join("\n");
-  const packageFiles = files.filter((path) => !path.includes(`${join(root, "test")}/`) && !path.includes(`${join(root, "tests")}/`));
-  const packageContent = (await Promise.all(packageFiles.map((path) => readFile(path, "utf8")))).join("\n");
   const formerProjectId = ["98a2bdf1", "f648", "4ba0", "8de6", "d37480b5daac"].join("-");
   const formerTeamId = ["8dee37c7", "a36e", "4e19", "8e42", "d88b8b72f663"].join("-");
   assert.equal(content.includes(formerProjectId), false);
   assert.equal(content.includes(formerTeamId), false);
-  const formerProjectName = ["LDKTech Solutions", "Agent Operations"].join(" — ");
-  assert.equal(content.includes(formerProjectName), false);
-  assert.doesNotMatch(packageContent, /\blin_api_[A-Za-z0-9_-]{8,}\b/u);
+  assert.doesNotMatch(content, /\blin_api_[A-Za-z0-9_-]{8,}\b/u);
+});
+
+test("internal work lock contains no Linear transport", async () => {
+  const source = await readFile(join(root, "scripts", "work-lock.mjs"), "utf8");
+  assert.doesNotMatch(source, /LINEAR_API_KEY|api\.linear|graphql|fetch\(|createIssue|updateIssue/iu);
 });
 
 async function listSourceFiles(directory) {
@@ -81,14 +87,3 @@ async function listSourceFiles(directory) {
   }
   return files;
 }
-
-test("packaged local lock has no Linear transport", async () => {
-  const sources = await Promise.all([
-    readFile(join(root, "scripts", "claim-lock", "cli.mjs"), "utf8"),
-    readFile(join(root, "scripts", "claim-lock", "store.mjs"), "utf8"),
-  ]);
-  assert.doesNotMatch(
-    sources.join("\n"),
-    /LINEAR_API_KEY|api\.linear|graphql|fetch\(|createIssue|updateIssue/iu,
-  );
-});

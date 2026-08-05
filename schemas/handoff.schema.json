@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ldktech.dev/schemas/linear-role-handoff.schema.json",
+  "title": "Linear Role Handoff",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "type", "issueId", "fromRole", "summary", "checks", "evidence", "nextAction"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "linear-role-handoff" },
+    "type": { "enum": ["handoff", "review", "blocked", "reconciliation"] },
+    "issueId": { "type": "string", "minLength": 1 },
+    "fromRole": { "$ref": "#/$defs/role" },
+    "toRole": { "$ref": "#/$defs/role" },
+    "summary": { "type": "string", "minLength": 1 },
+    "deliverables": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item", "passed"],
+        "properties": {
+          "item": { "type": "string", "minLength": 1 },
+          "passed": { "type": "boolean" }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "value"],
+        "properties": {
+          "label": { "type": "string", "minLength": 1 },
+          "value": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "knownLimitations": { "type": "array", "items": { "type": "string" } },
+    "nextAction": { "type": "string", "minLength": 1 },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "findings"],
+      "properties": {
+        "decision": { "enum": ["passed", "changes-requested"] },
+        "findings": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason", "impact", "neededFrom", "resumeWhen"],
+      "properties": {
+        "reason": { "type": "string", "minLength": 1 },
+        "impact": { "type": "string", "minLength": 1 },
+        "neededFrom": { "type": "string", "minLength": 1 },
+        "resumeWhen": { "type": "string", "minLength": 1 }
+      }
+    },
+    "software": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commitSha", "branchName", "git"],
+      "properties": {
+        "commitSha": { "type": "string", "pattern": "^[0-9a-fA-F]{7,64}$" },
+        "branchName": { "type": "string", "minLength": 1 },
+        "branchPushed": { "type": "boolean" },
+        "pullRequestUrl": { "type": "string", "format": "uri" },
+        "ciStatus": { "enum": ["passed", "failed", "pending", "not-configured"] },
+        "git": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["baselineId", "changeBaseSha", "scopePaths"],
+          "properties": {
+            "baselineId": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "changeBaseSha": { "type": "string", "pattern": "^[0-9a-fA-F]{7,64}$" },
+            "scopePaths": {
+              "type": "array", "minItems": 1, "uniqueItems": true,
+              "items": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "role": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "type": { "const": "handoff" } } },
+      "then": {
+        "required": ["toRole", "deliverables"],
+        "properties": {
+          "deliverables": { "minItems": 1 },
+          "checks": { "minItems": 1 },
+          "evidence": { "minItems": 1 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "review" } } },
+      "then": {
+        "required": ["review"],
+        "properties": {
+          "checks": { "minItems": 1 },
+          "evidence": { "minItems": 1 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "blocked" } } },
+      "then": { "required": ["blocker"] }
+    }
+  ]
+}

@@ -1,57 +1,63 @@
 # Plugin architecture
 
-## Source layer
+## Source, consumer và host
 
-The repository contains reusable plugin instructions, deterministic scripts,
-schemas, templates, and tests. `.codex-plugin/plugin.json` packages Codex and
-`.claude-plugin/plugin.json` packages Claude Code. Both hosts share the same
-`skills/`, `hooks/`, scripts, schemas, references, and assets.
+Repository này là source/package dùng chung. Mỗi consumer repository cung cấp một
+`.linear-project-ops.json` chứa Linear IDs, state IDs và role labels. Codex hoặc
+Claude Code cung cấp Linear OAuth tools. Plugin không chứa project thật, scheduler,
+credential hay Linear API client.
 
-## Consumer layer
+## Role-state contract
 
-Each product or business repository supplies one `.linear-project-ops.json` binding
-with immutable Linear IDs and coordination policy. The plugin discovers and verifies
-that file before Linear work. No consumer binding belongs in this source repository.
+Linear là nguồn sự thật cho công việc người dùng nhìn thấy. Một issue luôn có một
+vai trò chịu trách nhiệm cho giai đoạn hiện tại và một sản phẩm bàn giao hữu hình.
 
-## Host layer
+| State | Người thực hiện | Kết quả hợp lệ |
+|---|---|---|
+| Refinement | CPO, lead hoặc decision owner | đủ DoR để Ready hoặc Blocked rõ ràng |
+| Ready | `ownerRole` | sản phẩm đạt DoD và bàn giao In Review |
+| In Progress | `ownerRole` đang thực hiện | tiếp tục cùng role, không đổi ownership |
+| In Review | `reviewerRole` | Done hoặc Ready kèm findings |
+| Blocked | role đang sở hữu | điều kiện resume rõ ràng |
+| Done | không còn hành động | evidence và review đã hoàn tất |
 
-Codex or Claude provides authenticated Linear OAuth tools and optionally schedules
-runs. Claude Code connects to Linear's official remote MCP endpoint and completes
-OAuth interactively. Host automation and OAuth state are deployment state and are
-not packaged with the plugin.
+Sub-issue chỉ được tạo khi một deliverable riêng cần một role thực hiện độc lập.
+Không chia task theo thời lượng, token budget hay từng bước nội bộ của agent.
 
-## Coordination layer
+## Execution path
 
-The packaged claim-lock offers atomic SQLite leases to agents sharing one consumer
-filesystem. The database path is consumer-relative and ignored by Git. Teams running
-agents across machines must provide a shared atomic lease backend; Linear comments
-remain an explicitly weaker optimistic fallback.
+`linear-do-issue` là entry point chính:
 
-## Delivery layer
+1. Load immutable project binding và đọc live issue/resources/dependencies.
+2. Resolve role từ state và role label; legacy issue được suy luận thận trọng.
+3. Kiểm tra DoR và acquire file lock nội bộ.
+4. Thực hiện đúng một role phase.
+5. Validate handoff/review evidence.
+6. Update resources, một human comment, role label và state.
+7. Re-read Linear rồi release lock.
 
-Domain completion is separate from claim ownership and local verification. For
-`software.change`, a deterministic evidence validator applies consumer-configured
-child, review, and done gates. The default keeps merge and deployment outside
-agent authority while allowing a Ready issue to flow autonomously through branch,
-commit, push, PR, and CI. Manager acceptance is timestamped against the latest
-delivery change so an older approval cannot close newer code.
+Lock chỉ ngăn concurrency cục bộ. Nó không thay thế Linear state, không dùng SQLite,
+không tạo comment claim/heartbeat và không xuất token ra báo cáo. Agent ở nhiều máy
+dựa trên atomic Linear update/re-read; nếu cần shared locking thực sự thì đó là hạ
+tầng riêng ngoài plugin.
 
-Each claimed software parent uses one linked Git worktree shared only by its
-related child chain. A clean baseline artifact binds the issue to repository,
-worktree, branch, and base commit. State validation re-reads live Git, requires a
-clean worktree and current-HEAD commit, and rejects paths outside the issue's
-declared resource prefixes. Dirty or untracked files in another worktree are
-therefore quarantined rather than adopted, stashed, deleted, or accidentally
-committed.
+## Software boundary
+
+Engineer dùng linked worktree và Git baseline để cô lập issue. Validator so live
+Git với baseline, commit HEAD và declared scope trước handoff. Những file dirty hay
+untracked ở worktree khác không được nhận vào scope, stash, xóa hoặc commit ké.
+QA chỉ đọc commit/PR/CI/test evidence; QA không cần dùng worktree của engineer.
+
+## Human communication
+
+Mỗi role phase tạo tối đa một comment có cấu trúc: kết quả, deliverables/findings,
+DoD checks, evidence, giới hạn và next action. Machine telemetry như run ID, token,
+heartbeat, database path, worktree path và raw JSON bị cấm trên Linear.
 
 ## Safety invariants
 
-- Plan-driven writes require current explicit approval and `approved: true`.
-- Project identity comes only from the immutable consumer binding.
-- Stable keys and re-reads make writes idempotent and verifiable.
-- Claim tokens never leave local session memory.
-- Software states cannot advance from local-only evidence or stale acceptance.
-- Software states cannot advance from a self-reported scope boolean without live
-  baseline, isolation, and scope-clean verification.
-- Secrets, credentials, customer PII, and real project fixtures are forbidden in
-  the plugin package.
+- Project/team identity chỉ đến từ consumer binding.
+- Direct create/update/perform là quyền ghi có scope; draft/propose/preview là read-only.
+- Stable keys và post-mutation re-read giữ thao tác idempotent.
+- Destructive, bulk, cross-project và production actions cần quyền rõ ràng.
+- Secrets, credentials, PII và project fixtures thật bị cấm trong package.

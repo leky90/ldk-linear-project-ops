@@ -1,91 +1,105 @@
 # LDK Linear Project Ops
 
-Reusable Codex/Claude plugin source for closed-loop Linear project operations. It
-turns discussions into approved plans, triages and decomposes work, coordinates
-concurrent agents, executes bounded goal chains, reconciles state, and reports
-progress.
+Plugin dùng chung cho Codex và Claude Code để làm việc trên Linear như một thành
+viên trong tổ chức: đọc issue, nhận biết vai trò và trạng thái hiện tại, thực hiện
+đúng một giai đoạn công việc, rồi bàn giao cho vai trò tiếp theo bằng comment dễ
+đọc với con người.
 
-This repository is the canonical source and packaging workspace for the plugin. It
-does not bind to or operate any real Linear project.
+Repository này chỉ chứa mã nguồn và gói cài đặt plugin. Nó không gắn với một
+project Linear cụ thể và không chứa dữ liệu vận hành của LDKTech Solutions.
 
-## Plugin contents
+## Mô hình làm việc
 
-- `.codex-plugin/plugin.json`: Codex plugin manifest.
-- `.claude-plugin/plugin.json`: Claude Code plugin manifest.
-- `.claude-plugin/marketplace.json`: local Claude Code marketplace.
-- `skills/`: nine composable Linear operation skills.
-- `references/`: approval, data model, priority, decomposition, host, and claim rules.
-- `schemas/`: project binding, planning, and decomposition contracts.
-- `scripts/`: deterministic validators, software-delivery gates, reporting, hooks, stable keys, and claim lock.
-- `assets/`: neutral templates and example plans.
-- `examples/`: copyable consumer configuration with placeholder IDs.
-- `tests/`: plugin behavior fixtures and tests.
+```text
+CPO tạo brief/PRD
+        ↓
+Tech Lead phân tích và tạo task triển khai
+        ↓
+Software Engineer phát triển, commit, PR
+        ↓
+QA review DoD và bằng chứng
+        ↓
+Done hoặc trả về Ready cho vai trò cần sửa
+```
 
-## Consumer setup
+Luồng tương tự áp dụng cho content, marketing và sales. Mỗi issue khai báo:
 
-Install the plugin through the personal marketplace, then copy
-`examples/project-binding.example.json` to `.linear-project-ops.json` in the
-consumer repository. Replace only the placeholder project/team/state IDs and keep
-credentials out of the file.
+- kết quả mong muốn và sản phẩm bàn giao;
+- `ownerRole` và `reviewerRole`;
+- Definition of Ready (DoR) và Definition of Done (DoD);
+- resources và dependencies;
+- một trạng thái Linear chuẩn.
 
-For local coordination, keep `coordination.mode` as `atomic-local-lease`. The
-plugin stores runtime leases at the consumer-relative `databasePath`. That database
-is project state, not plugin source, and must remain uncommitted.
+Lệnh sử dụng thông thường chỉ cần:
 
-The plugin accesses Linear through the host's connected OAuth app. It does not read
-`LINEAR_API_KEY` and does not include a Linear API client.
+```text
+Hãy thực hiện issue LDK-123
+```
 
-## Software delivery gates
+Plugin tự đọc state, role, resources, DoR/DoD và chọn hành vi:
 
-Software issues do not become complete from working-tree changes or local tests
-alone. The default binding policy authorizes an agent handling a `Ready`
-`software.change` issue to commit, push, open a pull request, and mark it ready on
-an issue branch inside a dedicated linked Git worktree. A baseline captured before
-editing binds the issue, repository, worktree, branch, and base commit. Parent `In
-Review` requires the live worktree to be clean, current HEAD to match the evidence,
-the verified commit range to stay inside declared resource paths, and the existing
-commit/push/review-ready PR/CI evidence. Parent `Done` requires current manager
-acceptance after the latest delivery change and a merged PR. Deployment is also
-required when the issue or binding says so.
+- `Ready`: vai trò owner thực hiện và bàn giao sang `In Review`;
+- `In Review`: reviewer nghiệm thu; đạt thì `Done`, cần sửa thì về `Ready`;
+- `Blocked`: ghi rõ nguyên nhân, ảnh hưởng, ai cần xử lý và điều kiện tiếp tục;
+- `Refinement`: làm rõ phạm vi; Tech Lead có thể tạo task con nếu đó là sản phẩm
+  bàn giao cần một vai trò khác thực hiện.
 
-Consumers may refine these actions and gates in
-`workflow.softwareDelivery`. Before any software state transition, the execution
-and reconciliation skills invoke `scripts/validate-software-delivery.mjs` against
-current evidence, the local baseline artifact, and live Git state. Pre-existing
-dirty or untracked files remain in the original worktree and cannot enter a newly
-claimed issue's isolated worktree.
+## Bốn skill công khai
 
-## Claude Code setup
+- `linear-create-work`: tạo resources và issue theo vai trò từ brief/PRD/brainstorm.
+- `linear-do-issue`: thực hiện issue theo vai trò và trạng thái hiện tại.
+- `linear-project-status`: báo cáo hàng đợi, review, blocker và tiến độ theo vai trò.
+- `linear-reconcile`: sửa một bất nhất cụ thể; không dùng cho công việc bình thường.
 
-Add this repository as a local marketplace and install the plugin:
+## Cấu trúc plugin
+
+- `skills/`: bốn workflow công khai.
+- `references/`: mô hình vai trò, routing, comment, authority và software work.
+- `schemas/`: project binding, work plan, handoff và Git baseline.
+- `scripts/`: validator, comment renderer, report, hook, Git guard và file lock nội bộ.
+- `assets/`: template issue, brief, PRD, handoff, review, blocked và status.
+- `examples/`: binding giả lập để copy vào consumer repository.
+
+Không còn package CLI `linear-claim-lock` hay SQLite. Khóa chống hai agent xử lý
+cùng issue là chi tiết runtime nội bộ tại `.linear-ops/locks/`, bị Git ignore và
+không được ghi lên Linear.
+
+## Thiết lập consumer
+
+Copy `examples/project-binding.example.json` thành `.linear-project-ops.json` tại
+repository dự án, thay các ID placeholder bằng project/team/state ID thật và giữ
+file này ngoài Git. Kết nối Linear qua OAuth connector/MCP chính thức của host;
+plugin không cần `LINEAR_API_KEY` và không tự cài API client.
+
+Schema v1 cũ vẫn được đọc trong giai đoạn chuyển tiếp. Runtime bỏ qua SQLite,
+claim telemetry và software gate arrays của schema cũ; nên migrate sang schema v2
+khi chỉnh binding tiếp theo.
+
+## Software delivery
+
+Worktree Git riêng chỉ được tạo ở giai đoạn `software-engineer`. Baseline sạch ghi
+nhận repository, worktree, branch và commit trước khi sửa. Trước khi bàn giao sang
+QA, plugin yêu cầu toàn bộ thay đổi trong scope đã commit, worktree sạch và evidence
+trỏ đúng HEAD. QA review commit/PR/test evidence bất biến, không tiếp quản worktree
+đang chạy của engineer. Merge hoặc deploy chỉ thực hiện khi issue/DoD và quyền được
+giao yêu cầu điều đó.
+
+## Cài cho Claude Code
 
 ```sh
 claude plugin marketplace add /absolute/path/to/ldk-linear-project-ops
 claude plugin install ldk-linear-project-ops@ldk-linear-project-ops-local --scope user
 ```
 
-Connect Claude Code to Linear's official OAuth MCP server:
+Kết nối Linear OAuth theo connector hoặc MCP chính thức đã có trong host. Mở session
+mới sau khi update plugin để Claude nạp lại skill và hook.
 
-```sh
-claude mcp add --transport http linear-server https://mcp.linear.app/mcp
-```
-
-Open a new Claude Code session and run `/mcp` once to complete OAuth. The plugin
-automatically discovers `skills/` and `hooks/hooks.json`; no API key is required.
-
-## Development
+## Phát triển và kiểm tra
 
 ```sh
 npm run check
+claude plugin validate --strict .
 ```
 
-Validate the plugin package with both `claude plugin validate --strict .` and the
-Codex plugin-creator validator, then validate each skill with the skill-creator
-validator before reinstalling. Use the Codex cachebuster/reinstall flow for local
-development and `claude plugin update` after publishing a Claude marketplace update.
-
-## Boundary
-
-Real bindings, SQLite lease databases, automation schedules, issue identifiers,
-progress history, and project-specific operating instructions belong to consumer
-projects or the Codex host configuration. They must never be committed here.
+Ngoài ra cần validate bốn skill, JSON Schema và Codex manifest trước khi cài lại.
+Không commit binding thật, issue history, runtime lock, credential hoặc PII.

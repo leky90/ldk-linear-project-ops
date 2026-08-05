@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "linear-role-work-plan",
+  "mode": "preview",
+  "projectId": "project-1",
+  "teamId": "team-1",
+  "summary": "Prepare and deliver an example onboarding improvement.",
+  "resources": [
+    {
+      "key": "demo.resource.prd",
+      "title": "Onboarding PRD",
+      "type": "document",
+      "content": "Synthetic requirements for the example project."
+    }
+  ],
+  "issues": [
+    {
+      "key": "demo.initiative.onboarding",
+      "type": "initiative",
+      "title": "Improve onboarding",
+      "outcome": "New users reach activation with less friction.",
+      "deliverable": "Approved implementation plan and verified release.",
+      "status": "Ready",
+      "priority": "high",
+      "ownerRole": "tech-lead",
+      "reviewerRole": "cpo",
+      "definitionOfReady": ["PRD is linked"],
+      "definitionOfDone": ["Implementation tasks are reviewable"],
+      "resourceKeys": ["demo.resource.prd"],
+      "blockedByKeys": []
+    },
+    {
+      "key": "demo.task.onboarding-ui",
+      "type": "task",
+      "parentKey": "demo.initiative.onboarding",
+      "title": "Implement onboarding UI",
+      "outcome": "Users can complete the new onboarding flow.",
+      "deliverable": "Reviewed code and test evidence.",
+      "status": "Ready",
+      "priority": "high",
+      "ownerRole": "software-engineer",
+      "reviewerRole": "qa",
+      "definitionOfReady": ["Acceptance examples are in the PRD"],
+      "definitionOfDone": ["Tests pass", "Scoped changes are committed"],
+      "resourceKeys": ["demo.resource.prd"],
+      "blockedByKeys": []
+    }
+  ]
+}

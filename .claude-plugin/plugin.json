@@ -1,7 +1,7 @@
 {
   "name": "ldk-linear-project-ops",
-  "version": "0.4.0",
-  "description": "Reusable closed-loop Linear planning, coordination, execution, reconciliation, and reporting for Codex and Claude Code.",
+  "version": "1.0.0",
+  "description": "Role-based Linear work creation, execution, handoff, review, and reporting for Codex and Claude Code.",
   "author": {
     "name": "LDKTech Solutions"
   },
@@ -9,8 +9,9 @@
   "keywords": [
     "linear",
     "project-operations",
-    "agent-coordination",
-    "planning",
+    "role-workflow",
+    "handoff",
+    "review",
     "reporting"
   ]
 }

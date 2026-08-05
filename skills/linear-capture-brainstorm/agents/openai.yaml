@@ -1,4 +1,0 @@
-interface:
-  display_name: "Linear Brainstorm Capture"
-  short_description: "Turn brainstorming into a reviewable draft"
-  default_prompt: "Use $linear-capture-brainstorm to turn this discussion into a reviewable Linear plan without writing yet."

@@ -1,80 +1,79 @@
 {
-  "asOf": "2026-08-04T12:00:00.000Z",
+  "asOf": "2026-08-06T12:00:00.000Z",
   "project": {
     "id": "project-1",
-    "name": "Demo Operations",
+    "name": "Example Product",
     "url": "https://linear.app/example/project/demo"
   },
   "milestones": [
     {
       "key": "demo.milestone.onboarding",
-      "name": "Onboarding baseline",
-      "targetDate": "2026-08-10",
+      "name": "Onboarding release",
+      "targetDate": "2026-08-20",
       "url": "https://linear.app/example/milestone/onboarding"
     }
   ],
-  "measurementGaps": ["Activation baseline is unknown"],
   "issues": [
     {
-      "key": "demo.parent.onboarding",
-      "kind": "parent",
-      "title": "Establish onboarding baseline",
+      "key": "demo.initiative.onboarding",
+      "type": "initiative",
+      "title": "Improve onboarding",
       "status": "In Progress",
       "priority": "high",
-      "milestoneKey": "demo.milestone.onboarding",
-      "updatedAt": "2026-08-04T08:00:00.000Z",
-      "resources": ["docs:onboarding-baseline"],
-      "claim": {
-        "runId": "run-expired",
-        "expiresAt": "2026-08-04T10:00:00.000Z"
-      }
+      "ownerRole": "tech-lead",
+      "reviewerRole": "cpo",
+      "milestoneKey": "demo.milestone.onboarding"
     },
     {
-      "key": "demo.child.collect",
-      "kind": "sub-issue",
-      "parentKey": "demo.parent.onboarding",
-      "title": "Collect source data",
-      "status": "Done",
-      "priority": "high",
-      "milestoneKey": "demo.milestone.onboarding",
-      "updatedAt": "2026-08-04T09:00:00.000Z"
-    },
-    {
-      "key": "demo.child.report",
-      "kind": "sub-issue",
-      "parentKey": "demo.parent.onboarding",
-      "title": "Publish baseline report",
+      "key": "demo.task.ui",
+      "type": "task",
+      "title": "Implement onboarding UI",
       "status": "Ready",
       "priority": "high",
-      "priorityRationale": "Completes the current parent outcome.",
+      "ownerRole": "software-engineer",
+      "reviewerRole": "qa",
       "milestoneKey": "demo.milestone.onboarding",
-      "blockedByKeys": ["demo.child.collect"],
-      "updatedAt": "2026-08-04T10:00:00.000Z"
+      "url": "https://linear.app/example/issue/EXAMPLE-2"
+    },
+    {
+      "key": "demo.task.copy",
+      "type": "task",
+      "title": "Write onboarding copy",
+      "status": "In Review",
+      "priority": "normal",
+      "ownerRole": "content-writer",
+      "reviewerRole": "content-director",
+      "milestoneKey": "demo.milestone.onboarding"
+    },
+    {
+      "key": "demo.task.tests",
+      "type": "task",
+      "title": "Verify onboarding analytics",
+      "status": "Blocked",
+      "priority": "normal",
+      "ownerRole": "qa",
+      "reviewerRole": "tech-lead",
+      "blocker": { "neededFrom": "CPO" },
+      "milestoneKey": "demo.milestone.onboarding"
+    },
+    {
+      "key": "demo.task.brief",
+      "type": "task",
+      "title": "Approve product brief",
+      "status": "Done",
+      "priority": "high",
+      "ownerRole": "cpo",
+      "reviewerRole": "tech-lead",
+      "milestoneKey": "demo.milestone.onboarding"
     },
     {
       "key": "demo.decision.metric",
-      "kind": "decision",
+      "type": "decision",
       "title": "Choose activation metric",
       "status": "Refinement",
       "priority": "normal",
-      "labels": ["manager:decision"],
-      "updatedAt": "2026-08-01T09:00:00.000Z"
-    },
-    {
-      "key": "demo.blocked.integration",
-      "kind": "parent",
-      "title": "Verify external integration",
-      "status": "Blocked",
-      "priority": "normal",
-      "updatedAt": "2026-08-01T09:00:00.000Z"
-    },
-    {
-      "key": "demo.canceled.old",
-      "kind": "parent",
-      "title": "Superseded baseline",
-      "status": "Canceled",
-      "priority": "low",
-      "updatedAt": "2026-07-01T09:00:00.000Z"
+      "ownerRole": "cpo",
+      "reviewerRole": "tech-lead"
     }
   ]
 }

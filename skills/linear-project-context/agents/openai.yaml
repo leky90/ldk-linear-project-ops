@@ -1,4 +1,0 @@
-interface:
-  display_name: "Linear Project Context"
-  short_description: "Bind a repository to one Linear project"
-  default_prompt: "Use $linear-project-context to load the current repository's immutable Linear project context."

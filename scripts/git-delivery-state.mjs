@@ -150,18 +150,19 @@ async function isAncestor(repository, ancestor, descendant) {
 
 export async function validateLiveGitDelivery({ evidence, baseline, repository = ".", worktreeIsolation = "required" }) {
   const errors = validateGitBaseline(baseline);
-  const gitEvidence = evidence?.git;
+  const delivery = evidence?.software ?? evidence;
+  const gitEvidence = delivery?.git;
   if (!gitEvidence || typeof gitEvidence !== "object" || Array.isArray(gitEvidence)) {
     return {
-      errors: [...errors, "evidence.git is required"],
+      errors: [...errors, "software.git is required"],
       summary: { baselineRecorded: false, isolationSatisfied: false, scopeClean: false },
     };
   }
-  if (gitEvidence.baselineId !== baseline?.baselineId) errors.push("evidence.git.baselineId does not match the baseline artifact");
+  if (gitEvidence.baselineId !== baseline?.baselineId) errors.push("software.git.baselineId does not match the baseline artifact");
   if (baseline?.issueId !== evidence?.issueId) errors.push("Git baseline issueId does not match evidence.issueId");
   errors.push(...validateScopePaths(gitEvidence.scopePaths));
   if (typeof gitEvidence.changeBaseSha !== "string" || !SHA_PATTERN.test(gitEvidence.changeBaseSha)) {
-    errors.push("evidence.git.changeBaseSha is invalid");
+    errors.push("software.git.changeBaseSha is invalid");
   }
   if (!new Set(["required", "allow-clean-primary"]).has(worktreeIsolation)) errors.push("worktreeIsolation is invalid");
 
@@ -185,24 +186,24 @@ export async function validateLiveGitDelivery({ evidence, baseline, repository =
     errors.push("a dedicated linked Git worktree is required");
   }
   if (!state.clean) errors.push("live worktree contains uncommitted or untracked files");
-  if (state.headCommit !== evidence?.commitSha) errors.push("evidence.commitSha must equal the live worktree HEAD");
+  if (state.headCommit !== delivery?.commitSha) errors.push("software.commitSha must equal the live worktree HEAD");
 
-  const commitShaValid = typeof evidence?.commitSha === "string" && SHA_PATTERN.test(evidence.commitSha);
+  const commitShaValid = typeof delivery?.commitSha === "string" && SHA_PATTERN.test(delivery.commitSha);
   const changeBaseValid = typeof gitEvidence.changeBaseSha === "string" && SHA_PATTERN.test(gitEvidence.changeBaseSha);
-  if (commitShaValid && baseline?.baselineCommit && !(await isAncestor(state.root, baseline.baselineCommit, evidence.commitSha))) {
-    errors.push("evidence.commitSha is not descended from the recorded baseline commit");
+  if (commitShaValid && baseline?.baselineCommit && !(await isAncestor(state.root, baseline.baselineCommit, delivery.commitSha))) {
+    errors.push("software.commitSha is not descended from the recorded baseline commit");
   }
   if (changeBaseValid && baseline?.baselineCommit && !(await isAncestor(state.root, baseline.baselineCommit, gitEvidence.changeBaseSha))) {
-    errors.push("evidence.git.changeBaseSha is outside the recorded baseline chain");
+    errors.push("software.git.changeBaseSha is outside the recorded baseline chain");
   }
-  if (changeBaseValid && commitShaValid && !(await isAncestor(state.root, gitEvidence.changeBaseSha, evidence.commitSha))) {
-    errors.push("evidence.commitSha is not descended from evidence.git.changeBaseSha");
+  if (changeBaseValid && commitShaValid && !(await isAncestor(state.root, gitEvidence.changeBaseSha, delivery.commitSha))) {
+    errors.push("software.commitSha is not descended from software.git.changeBaseSha");
   }
 
   let changedPaths = [];
   if (changeBaseValid && commitShaValid) {
     try {
-      const output = await git(state.root, ["diff", "--name-only", "--no-renames", "-z", gitEvidence.changeBaseSha, evidence.commitSha], { encoding: "buffer" });
+      const output = await git(state.root, ["diff", "--name-only", "--no-renames", "-z", gitEvidence.changeBaseSha, delivery.commitSha], { encoding: "buffer" });
       changedPaths = output.toString("utf8").split("\0").filter(Boolean);
       if (changedPaths.length === 0) errors.push("the verified commit range contains no changed paths");
       if (Array.isArray(gitEvidence.scopePaths)) {
@@ -235,7 +236,7 @@ export async function validateLiveGitDelivery({ evidence, baseline, repository =
       branchName: state.branchName,
       baselineCommit: baseline?.baselineCommit,
       changeBaseSha: gitEvidence.changeBaseSha,
-      commitSha: evidence?.commitSha,
+      commitSha: delivery?.commitSha,
       changedPaths,
       remainingWorktreeChanges: state.clean ? 0 : 1,
     },

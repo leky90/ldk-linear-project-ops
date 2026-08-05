@@ -4,9 +4,9 @@
   "title": "Linear Project Ops Binding",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "project", "workflow", "coordination"],
+  "required": ["schemaVersion", "project", "workflow"],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "project": {
       "type": "object",
       "additionalProperties": false,
@@ -26,13 +26,14 @@
     "workflow": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["states", "labels"],
+      "required": ["states", "roles"],
       "properties": {
         "states": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["ready", "inProgress", "inReview", "blocked", "done"],
+          "required": ["refinement", "ready", "inProgress", "inReview", "blocked", "done"],
           "properties": {
+            "refinement": { "type": "string", "minLength": 1 },
             "ready": { "type": "string", "minLength": 1 },
             "inProgress": { "type": "string", "minLength": 1 },
             "inReview": { "type": "string", "minLength": 1 },
@@ -40,96 +41,20 @@
             "done": { "type": "string", "minLength": 1 }
           }
         },
-        "labels": {
+        "roles": {
           "type": "object",
-          "additionalProperties": false,
-          "required": ["parent", "subIssue", "decision"],
-          "properties": {
-            "parent": { "type": "string" },
-            "subIssue": { "type": "string" },
-            "decision": { "type": "string" }
-          }
-        },
-        "softwareDelivery": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["agentActions", "childDoneRequires", "reviewRequires", "doneRequires", "deployment", "worktreeIsolation"],
-          "properties": {
-            "agentActions": {
-              "type": "array",
-              "minItems": 1,
-              "uniqueItems": true,
-              "items": {
-                "enum": ["commit", "push", "open-pull-request", "mark-pull-request-ready", "merge", "deploy"]
-              }
-            },
-            "childDoneRequires": {
-              "type": "array",
-              "minItems": 1,
-              "uniqueItems": true,
-              "allOf": [
-                { "contains": { "const": "acceptance-criteria" } },
-                { "contains": { "const": "scoped-changes-accounted" } },
-                { "contains": { "const": "git-baseline" } },
-                { "contains": { "const": "worktree-isolated" } },
-                { "contains": { "const": "scope-clean" } }
-              ],
-              "items": {
-                "enum": ["acceptance-criteria", "scoped-changes-accounted", "git-baseline", "worktree-isolated", "scope-clean", "commit"]
-              }
-            },
-            "reviewRequires": {
-              "type": "array",
-              "minItems": 1,
-              "uniqueItems": true,
-              "allOf": [
-                { "contains": { "const": "acceptance-criteria" } },
-                { "contains": { "const": "scoped-changes-accounted" } },
-                { "contains": { "const": "git-baseline" } },
-                { "contains": { "const": "worktree-isolated" } },
-                { "contains": { "const": "scope-clean" } }
-              ],
-              "items": {
-                "enum": ["acceptance-criteria", "scoped-changes-accounted", "git-baseline", "worktree-isolated", "scope-clean", "commit", "push", "pull-request", "non-draft-pull-request", "ci"]
-              }
-            },
-            "doneRequires": {
-              "type": "array",
-              "minItems": 2,
-              "uniqueItems": true,
-              "allOf": [
-                { "contains": { "const": "manager-acceptance" } },
-                { "contains": { "const": "acceptance-after-last-delivery" } }
-              ],
-              "items": {
-                "enum": ["manager-acceptance", "acceptance-after-last-delivery", "merge"]
-              }
-            },
-            "deployment": { "enum": ["never", "when-required", "always"] },
-            "worktreeIsolation": { "enum": ["required", "allow-clean-primary"] }
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label"],
+            "properties": {
+              "label": { "type": "string", "pattern": "^role:[a-z0-9][a-z0-9-]*$" },
+              "defaultReviewer": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }
+            }
           }
         }
       }
-    },
-    "coordination": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["mode", "leaseMinutes", "heartbeatMinutes", "runBudgetMinutes"],
-      "properties": {
-        "mode": {
-          "enum": ["atomic-local-lease", "shared-lease-service", "linear-optimistic"]
-        },
-        "databasePath": { "type": "string", "minLength": 1 },
-        "leaseMinutes": { "type": "integer", "minimum": 5, "maximum": 240 },
-        "heartbeatMinutes": { "type": "integer", "minimum": 1, "maximum": 60 },
-        "runBudgetMinutes": { "type": "integer", "minimum": 5, "maximum": 240 }
-      },
-      "allOf": [
-        {
-          "if": { "properties": { "mode": { "const": "atomic-local-lease" } } },
-          "then": { "required": ["databasePath"] }
-        }
-      ]
     }
   }
 }

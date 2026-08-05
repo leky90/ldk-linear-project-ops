@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create Linear Work"
+  short_description: "Create role-ready work and supporting resources"
+  default_prompt: "Use $linear-create-work to create role-ready Linear issues and supporting resources."

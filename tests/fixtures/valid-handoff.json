@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "kind": "linear-role-handoff",
+  "type": "handoff",
+  "issueId": "EXAMPLE-123",
+  "fromRole": "tech-lead",
+  "toRole": "software-engineer",
+  "summary": "Requirements were analyzed and the implementation task is ready.",
+  "deliverables": ["Implementation notes", "Acceptance examples"],
+  "checks": [
+    { "item": "Scope is explicit", "passed": true },
+    { "item": "Dependencies are linked", "passed": true }
+  ],
+  "evidence": [
+    { "label": "PRD", "value": "Linear resource: Onboarding PRD" }
+  ],
+  "knownLimitations": ["Analytics naming still needs product confirmation"],
+  "nextAction": "Software Engineer implements the linked task and submits it for QA review."
+}

@@ -1,29 +1,29 @@
 {
   "name": "ldk-linear-project-ops",
-  "version": "0.4.0+codex.20260805155849",
-  "description": "Reusable closed-loop Linear planning, coordination, execution, reconciliation, and reporting for Codex and Claude Code.",
+  "version": "1.0.0+codex.20260805183012",
+  "description": "Role-based Linear work creation, execution, handoff, review, and project reporting for Codex and Claude Code.",
   "author": {
     "name": "LDKTech Solutions"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "Linear Project Ops",
-    "shortDescription": "Plan, coordinate, execute, and report work in Linear.",
-    "longDescription": "A reusable guarded workflow for turning discussions into approved Linear plans, decomposing goals, coordinating concurrent agents, executing bounded goal chains, reconciling state, and reporting project health.",
+    "shortDescription": "Perform Linear work as the role responsible for each stage.",
+    "longDescription": "A human-oriented workflow for creating role-owned work, performing one issue according to its state and resources, handing it to the next role, reviewing Definition of Done evidence, and reporting project queues.",
     "developerName": "LDKTech Solutions",
     "category": "Productivity",
     "capabilities": [
-      "Linear planning",
-      "Issue triage",
-      "Agent coordination",
-      "Software delivery gates",
-      "Git worktree isolation",
+      "Role-based issue creation",
+      "Issue execution and handoff",
+      "Definition of Ready and Done",
+      "Human-readable review comments",
+      "Internal concurrency protection",
       "Project reporting"
     ],
     "defaultPrompt": [
-      "Capture this brainstorm as a Linear plan for review.",
-      "Claim and execute the next safe goal chain.",
-      "Report project progress, blockers, and priorities."
+      "Create role-owned Linear issues and resources from this product brief.",
+      "Perform issue LDK-123 according to its current role and state.",
+      "Report project progress by role, review queue, blockers, and priorities."
     ]
   }
 }

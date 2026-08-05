@@ -1,4 +1,0 @@
-interface:
-  display_name: "Linear Work Triage"
-  short_description: "Classify and prioritize Linear project work"
-  default_prompt: "Use $linear-triage-work to classify and prioritize the open work in this Linear project."

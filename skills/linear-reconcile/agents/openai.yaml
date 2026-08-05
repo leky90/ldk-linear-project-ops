@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reconcile Linear Work"
+  short_description: "Repair stale locks and inconsistent handoffs"
+  default_prompt: "Use $linear-reconcile to repair an interrupted or inconsistent Linear issue."

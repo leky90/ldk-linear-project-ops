@@ -1,17 +1,14 @@
 {
   "name": "ldk-linear-project-ops",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=24"
   },
-  "bin": {
-    "linear-claim-lock": "./scripts/claim-lock/cli.mjs"
-  },
   "scripts": {
     "test": "node --test test/*.test.mjs tests/run-tests.mjs",
-    "lint": "node --check scripts/*.mjs scripts/claim-lock/*.mjs test/*.test.mjs tests/run-tests.mjs",
+    "lint": "node --check scripts/*.mjs test/*.test.mjs tests/run-tests.mjs",
     "check": "npm run lint && npm test"
   }
 }

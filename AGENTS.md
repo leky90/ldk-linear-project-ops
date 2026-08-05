@@ -26,16 +26,17 @@ absent, ask before initializing it.
 This repository builds and packages `ldk-linear-project-ops`. It is not the
 operations workspace for any specific Linear project.
 
-- Never commit a real `.linear-project-ops.json`, Linear project/team ID, claim
-  database, automation schedule, issue history, credential, token, or customer PII.
+- Never commit a real `.linear-project-ops.json`, Linear project/team ID, runtime
+  lock, automation schedule, issue history, credential, token, or customer PII.
 - Keep examples synthetic and obviously non-production.
 - Put reusable behavior in `skills/`, `references/`, `schemas/`, `scripts/`, or
   `assets/`; put project-specific configuration in the consumer repository.
 - Use the connected Linear OAuth app in consumers. Do not implement or request a
   `LINEAR_API_KEY`.
-- Preserve explicit approval before plan-driven Linear mutations.
-- Keep claim tokens local and redact them from list, heartbeat, verify, release,
-  evidence, and Linear output.
+- Interpret direct create/update/perform instructions as scoped write authority;
+  draft/propose/preview requests remain read-only.
+- Keep internal lock tokens local. Never publish them, run IDs, heartbeats, local
+  paths, or raw handoff JSON to Linear.
 
 Before handoff, run `npm run check`, validate every skill, validate the plugin
 manifest, scan tracked content for real bindings/secrets, and use the plugin

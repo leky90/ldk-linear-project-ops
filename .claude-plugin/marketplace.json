@@ -8,8 +8,8 @@
     {
       "name": "ldk-linear-project-ops",
       "source": "./",
-      "description": "Closed-loop Linear planning and agent coordination for Claude Code.",
-      "version": "0.4.0"
+      "description": "Role-based Linear issue execution, handoff, review, and reporting for Claude Code.",
+      "version": "1.0.0"
     }
   ]
 }
