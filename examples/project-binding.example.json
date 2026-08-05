@@ -22,10 +22,11 @@
     },
     "softwareDelivery": {
       "agentActions": ["commit", "push", "open-pull-request", "mark-pull-request-ready"],
-      "childDoneRequires": ["acceptance-criteria", "scoped-changes-accounted", "commit"],
-      "reviewRequires": ["acceptance-criteria", "scoped-changes-accounted", "commit", "push", "pull-request", "non-draft-pull-request", "ci"],
+      "childDoneRequires": ["acceptance-criteria", "scoped-changes-accounted", "git-baseline", "worktree-isolated", "scope-clean", "commit"],
+      "reviewRequires": ["acceptance-criteria", "scoped-changes-accounted", "git-baseline", "worktree-isolated", "scope-clean", "commit", "push", "pull-request", "non-draft-pull-request", "ci"],
       "doneRequires": ["manager-acceptance", "acceptance-after-last-delivery", "merge"],
-      "deployment": "when-required"
+      "deployment": "when-required",
+      "worktreeIsolation": "required"
     }
   },
   "coordination": {

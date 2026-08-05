@@ -53,7 +53,7 @@
         "softwareDelivery": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["agentActions", "childDoneRequires", "reviewRequires", "doneRequires", "deployment"],
+          "required": ["agentActions", "childDoneRequires", "reviewRequires", "doneRequires", "deployment", "worktreeIsolation"],
           "properties": {
             "agentActions": {
               "type": "array",
@@ -69,10 +69,13 @@
               "uniqueItems": true,
               "allOf": [
                 { "contains": { "const": "acceptance-criteria" } },
-                { "contains": { "const": "scoped-changes-accounted" } }
+                { "contains": { "const": "scoped-changes-accounted" } },
+                { "contains": { "const": "git-baseline" } },
+                { "contains": { "const": "worktree-isolated" } },
+                { "contains": { "const": "scope-clean" } }
               ],
               "items": {
-                "enum": ["acceptance-criteria", "scoped-changes-accounted", "commit"]
+                "enum": ["acceptance-criteria", "scoped-changes-accounted", "git-baseline", "worktree-isolated", "scope-clean", "commit"]
               }
             },
             "reviewRequires": {
@@ -81,10 +84,13 @@
               "uniqueItems": true,
               "allOf": [
                 { "contains": { "const": "acceptance-criteria" } },
-                { "contains": { "const": "scoped-changes-accounted" } }
+                { "contains": { "const": "scoped-changes-accounted" } },
+                { "contains": { "const": "git-baseline" } },
+                { "contains": { "const": "worktree-isolated" } },
+                { "contains": { "const": "scope-clean" } }
               ],
               "items": {
-                "enum": ["acceptance-criteria", "scoped-changes-accounted", "commit", "push", "pull-request", "non-draft-pull-request", "ci"]
+                "enum": ["acceptance-criteria", "scoped-changes-accounted", "git-baseline", "worktree-isolated", "scope-clean", "commit", "push", "pull-request", "non-draft-pull-request", "ci"]
               }
             },
             "doneRequires": {
@@ -99,7 +105,8 @@
                 "enum": ["manager-acceptance", "acceptance-after-last-delivery", "merge"]
               }
             },
-            "deployment": { "enum": ["never", "when-required", "always"] }
+            "deployment": { "enum": ["never", "when-required", "always"] },
+            "worktreeIsolation": { "enum": ["required", "allow-clean-primary"] }
           }
         }
       }

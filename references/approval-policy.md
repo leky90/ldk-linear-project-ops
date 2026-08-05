@@ -30,7 +30,7 @@ For structured plans, require both:
 
 After a manager has placed a fully specified issue in `Ready`, normal claim, heartbeat, evidence, child-state, and reconciliation updates are pre-authorized within that issue's scope.
 
-For `software.change`, the consumer binding's `workflow.softwareDelivery.agentActions` is also explicit execution authority. The default authorizes commit, push, opening a pull request, and marking it ready on a dedicated issue branch. Actions outside that list—including merge and deploy by default—still require explicit authority. Never downgrade a missing external action into local-only `Done` evidence.
+For `software.change`, the consumer binding's `workflow.softwareDelivery.agentActions` is also explicit execution authority. The default authorizes creating/reusing the parent-specific linked worktree and issue branch, recording a local baseline, committing, pushing, opening a pull request, and marking it ready. Worktree isolation never authorizes cleaning, stashing, deleting, or adopting pre-existing changes from another worktree. Actions outside the configured action list—including merge and deploy by default—still require explicit authority. Never downgrade a missing external action into local-only `Done` evidence.
 
 New deliverables outside the approved issue, credentials, money, production changes not authorized by the delivery policy, or other irreversible actions still require the authority demanded by the issue and repository policy.
 

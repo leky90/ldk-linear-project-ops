@@ -14,7 +14,7 @@ State how this step advances the parent.
 
 - Independently verifiable result.
 - Durable evidence URI.
-- For `software.change`: scoped changes are fully accounted and anchored to a commit before Done.
+- For `software.change`: execute in the parent's dedicated linked worktree; require a clean Git baseline, only declared scope paths in the verified commit range, no remaining tracked/untracked changes, and current-HEAD commit evidence before Done.
 
 ## Dependencies
 

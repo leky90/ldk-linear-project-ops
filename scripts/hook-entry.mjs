@@ -35,7 +35,7 @@ function handle(name, payload, binding) {
     return wrap(attributes, "Re-read every affected Linear entity now. Report actual created, updated, skipped, conflicted, and failed results.");
   }
   if (name === "Stop") {
-    return wrap(attributes, "If Linear work occurred, release or preserve the claim explicitly, attach evidence, reconcile parent/child state, and summarize remaining work. For software.change, do not report child Done, parent In Review, or parent Done until the corresponding validate-software-delivery gate passes.");
+    return wrap(attributes, "If Linear work occurred, release or preserve the claim explicitly, attach evidence, reconcile parent/child state, and summarize remaining work. For software.change, preserve unrelated dirty files, use the claimed parent's linked worktree and Git baseline, and do not report child Done, parent In Review, or parent Done until the corresponding live validate-software-delivery gate passes.");
   }
   return "";
 }

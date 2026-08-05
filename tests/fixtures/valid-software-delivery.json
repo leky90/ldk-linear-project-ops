@@ -1,10 +1,15 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "kind": "linear-software-delivery-evidence",
   "issueId": "EXAMPLE-123",
   "capabilities": ["software.change"],
   "acceptanceCriteriaVerified": true,
   "scopedChangesAccounted": true,
+  "git": {
+    "baselineId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "changeBaseSha": "1111111111111111111111111111111111111111",
+    "scopePaths": ["src/example", "tests/example.test.js"]
+  },
   "commitSha": "0123456789abcdef0123456789abcdef01234567",
   "branchName": "agent/example-123",
   "branchPushed": true,

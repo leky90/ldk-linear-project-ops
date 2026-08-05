@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,6 +7,7 @@ import { spawn } from "node:child_process";
 import test from "node:test";
 
 import { buildProjectReport } from "../scripts/build-project-report.mjs";
+import { captureGitBaseline, validateLiveGitDelivery } from "../scripts/git-delivery-state.mjs";
 import {
   DEFAULT_SOFTWARE_DELIVERY_POLICY,
   readJson,
@@ -20,6 +21,11 @@ import {
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixture = (name) => join(here, "fixtures", name);
+const validGitValidation = Object.freeze({
+  baselineRecorded: true,
+  isolationSatisfied: true,
+  scopeClean: true,
+});
 
 test("stable key is deterministic, normalized, and valid", () => {
   const first = stableKey(["Example Product", "Đo lường tăng trưởng"]);
@@ -49,17 +55,25 @@ test("software delivery policy rejects unsafe or unknown completion gates", asyn
 
 test("software child completion requires verified scoped work anchored to a commit", async () => {
   const evidence = await readJson(fixture("valid-software-delivery.json"));
-  assert.deepEqual(validateSoftwareDelivery(evidence, { target: "child-done" }), []);
+  assert.deepEqual(validateSoftwareDelivery(evidence, { target: "child-done", gitValidation: validGitValidation }), []);
 
   evidence.commitSha = "";
-  assert.match(validateSoftwareDelivery(evidence, { target: "child-done" }).join("\n"), /commitSha is required/u);
+  assert.match(validateSoftwareDelivery(evidence, { target: "child-done", gitValidation: validGitValidation }).join("\n"), /commitSha is required/u);
+});
+
+test("software completion cannot pass from boolean scope claims without live Git gates", async () => {
+  const evidence = await readJson(fixture("valid-software-delivery.json"));
+  const errors = validateSoftwareDelivery(evidence, { target: "child-done" }).join("\n");
+  assert.match(errors, /verified Git baseline is required/u);
+  assert.match(errors, /worktree isolation gate is not satisfied/u);
+  assert.match(errors, /live Git scope is not clean/u);
 });
 
 test("software parent cannot enter review with a draft PR or incomplete CI", async () => {
   const evidence = await readJson(fixture("valid-software-delivery.json"));
   evidence.pullRequest.draft = true;
   evidence.pullRequest.ciStatus = "pending";
-  const errors = validateSoftwareDelivery(evidence, { target: "in-review" }).join("\n");
+  const errors = validateSoftwareDelivery(evidence, { target: "in-review", gitValidation: validGitValidation }).join("\n");
   assert.match(errors, /must be ready for review/u);
   assert.match(errors, /CI must pass/u);
 });
@@ -67,19 +81,97 @@ test("software parent cannot enter review with a draft PR or incomplete CI", asy
 test("software parent cannot be Done from acceptance older than delivery", async () => {
   const evidence = await readJson(fixture("valid-software-delivery.json"));
   evidence.managerAcceptance.acceptedAt = "2026-01-02T02:00:00.000Z";
-  assert.match(validateSoftwareDelivery(evidence, { target: "done" }).join("\n"), /predates the latest delivery change/u);
+  assert.match(validateSoftwareDelivery(evidence, { target: "done", gitValidation: validGitValidation }).join("\n"), /predates the latest delivery change/u);
 });
 
 test("software parent Done requires merge and required deployment evidence", async () => {
   const evidence = await readJson(fixture("valid-software-delivery.json"));
-  assert.deepEqual(validateSoftwareDelivery(evidence, { target: "done" }), []);
+  assert.deepEqual(validateSoftwareDelivery(evidence, { target: "done", gitValidation: validGitValidation }), []);
 
   evidence.pullRequest.merged = false;
-  assert.match(validateSoftwareDelivery(evidence, { target: "done" }).join("\n"), /must be merged/u);
+  assert.match(validateSoftwareDelivery(evidence, { target: "done", gitValidation: validGitValidation }).join("\n"), /must be merged/u);
 
   evidence.pullRequest.merged = true;
   evidence.deployment.required = true;
-  assert.match(validateSoftwareDelivery(evidence, { target: "done" }).join("\n"), /deployment is not verified/u);
+  assert.match(validateSoftwareDelivery(evidence, { target: "done", gitValidation: validGitValidation }).join("\n"), /deployment is not verified/u);
+});
+
+test("Git baseline rejects a primary worktree and any pre-existing dirt", async () => {
+  const { primary } = await createGitFixture();
+  await assert.rejects(
+    captureGitBaseline({ repository: primary, issueId: "EXAMPLE-123" }),
+    /dedicated linked Git worktree is required/u,
+  );
+  await writeFile(join(primary, "untracked.txt"), "old work\n");
+  await assert.rejects(
+    captureGitBaseline({ repository: primary, issueId: "EXAMPLE-123", worktreeIsolation: "allow-clean-primary" }),
+    /dirty worktree/u,
+  );
+});
+
+test("baseline CLI writes only to an ignored path and never overwrites an existing baseline", async () => {
+  const { linked } = await createGitFixture();
+  const output = join(linked, ".linear-ops", "baselines", "EXAMPLE-123.json");
+  const script = join(here, "..", "scripts", "capture-git-baseline.mjs");
+  const result = await runProcess(process.execPath, [script, output, "--issue", "EXAMPLE-123", "--repository", linked], "");
+  assert.match(result, /"valid": true/u);
+  const baseline = await readJson(output);
+  assert.equal(baseline.issueId, "EXAMPLE-123");
+  assert.deepEqual(await runProcess("git", ["-C", linked, "status", "--porcelain"], ""), "");
+  await assert.rejects(
+    runProcess(process.execPath, [script, output, "--issue", "EXAMPLE-123", "--repository", linked], ""),
+    /baseline output already exists/u,
+  );
+});
+
+test("live Git delivery passes only for a clean scoped commit in the claimed worktree", async () => {
+  const { linked } = await createGitFixture();
+  const baseline = await captureGitBaseline({ repository: linked, issueId: "EXAMPLE-123" });
+  await mkdir(join(linked, "src", "example"), { recursive: true });
+  await writeFile(join(linked, "src", "example", "feature.mjs"), "export const ready = true;\n");
+  await runProcess("git", ["-C", linked, "add", "src/example/feature.mjs"], "");
+  await runProcess("git", ["-C", linked, "commit", "-m", "feat: add example"], "");
+  const commitSha = (await runProcess("git", ["-C", linked, "rev-parse", "HEAD"], "")).trim();
+  const evidence = await readJson(fixture("valid-software-delivery.json"));
+  evidence.commitSha = commitSha;
+  evidence.branchName = baseline.branchName;
+  evidence.git = {
+    baselineId: baseline.baselineId,
+    changeBaseSha: baseline.baselineCommit,
+    scopePaths: ["src/example"],
+  };
+
+  const result = await validateLiveGitDelivery({ evidence, baseline, repository: linked });
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.summary.baselineRecorded, true);
+  assert.equal(result.summary.isolationSatisfied, true);
+  assert.equal(result.summary.scopeClean, true);
+  assert.deepEqual(result.summary.changedPaths, ["src/example/feature.mjs"]);
+
+  await writeFile(join(linked, "leftover.tmp"), "untracked\n");
+  const dirty = await validateLiveGitDelivery({ evidence, baseline, repository: linked });
+  assert.match(dirty.errors.join("\n"), /uncommitted or untracked files/u);
+  assert.equal(dirty.summary.scopeClean, false);
+});
+
+test("live Git delivery rejects committed paths outside the declared issue scope", async () => {
+  const { linked } = await createGitFixture();
+  const baseline = await captureGitBaseline({ repository: linked, issueId: "EXAMPLE-123" });
+  await writeFile(join(linked, "outside.txt"), "wrong scope\n");
+  await runProcess("git", ["-C", linked, "add", "outside.txt"], "");
+  await runProcess("git", ["-C", linked, "commit", "-m", "test: outside scope"], "");
+  const commitSha = (await runProcess("git", ["-C", linked, "rev-parse", "HEAD"], "")).trim();
+  const evidence = await readJson(fixture("valid-software-delivery.json"));
+  evidence.commitSha = commitSha;
+  evidence.branchName = baseline.branchName;
+  evidence.git = {
+    baselineId: baseline.baselineId,
+    changeBaseSha: baseline.baselineCommit,
+    scopePaths: ["src/example"],
+  };
+  const result = await validateLiveGitDelivery({ evidence, baseline, repository: linked });
+  assert.match(result.errors.join("\n"), /committed paths outside declared scope: outside.txt/u);
+  assert.equal(result.summary.scopeClean, false);
 });
 
 test("valid draft plan passes but cannot be applied before approval", async () => {
@@ -151,4 +243,20 @@ function runProcess(command, args, input) {
     });
     child.stdin.end(input);
   });
+}
+
+async function createGitFixture() {
+  const root = await mkdtemp(join(tmpdir(), "ldk-linear-git-"));
+  const primary = join(root, "primary");
+  const linked = join(root, "linked");
+  await mkdir(primary);
+  await runProcess("git", ["init", "-b", "main", primary], "");
+  await runProcess("git", ["-C", primary, "config", "user.name", "Plugin Test"], "");
+  await runProcess("git", ["-C", primary, "config", "user.email", "plugin-test@example.invalid"], "");
+  await writeFile(join(primary, "README.md"), "fixture\n");
+  await writeFile(join(primary, ".gitignore"), ".linear-ops/\n");
+  await runProcess("git", ["-C", primary, "add", "README.md", ".gitignore"], "");
+  await runProcess("git", ["-C", primary, "commit", "-m", "test: initial"], "");
+  await runProcess("git", ["-C", primary, "worktree", "add", "-b", "agent/example-123", linked], "");
+  return { primary, linked };
 }

@@ -15,16 +15,18 @@ Maintain one focus parent and finish as many safe dependent steps as the time bu
 4. Choose a runnable child in dependency order that can finish safely within the remaining budget.
 5. Re-read the child and claim state immediately before work.
 6. Follow the repository's domain workflow. For `software.change`, read [software-delivery-policy.md](../../references/software-delivery-policy.md) and obey its Git authority and completion gates; marketing, design, sales, and analysis use their own evidence workflow.
-7. Work within declared resources. Heartbeat or renew the lease during long steps.
-8. Verify acceptance criteria and attach durable evidence. For a software child, run `validate-software-delivery.mjs --target child-done` before moving it to `Done`.
-9. Invoke `$linear-reconcile-project`, re-read the parent, then continue with the newly unblocked child.
+7. Before any software edit, create or safely reuse the focus parent's dedicated linked worktree and issue branch. Leave dirty/untracked files in the original worktree untouched. Capture a clean Git baseline with the packaged `capture-git-baseline.mjs`; stop and release if the worktree is dirty, mismatched, or cannot be isolated.
+8. Work within declared resources. Stage explicit paths only, never a repository-wide add. Heartbeat or renew the lease during long steps.
+9. Verify acceptance criteria and attach durable evidence. For a software child, build schema-v2 evidence with `git.baselineId`, the previous verified commit as `git.changeBaseSha`, and declared `git.scopePaths`; run `validate-software-delivery.mjs --target child-done --baseline ... --repository ...` from the claimed worktree before moving it to `Done`.
+10. Invoke `$linear-reconcile-project`, re-read the parent, then continue with the newly unblocked child in the same worktree.
 
 ## Software delivery
 
-- Treat `workflow.softwareDelivery.agentActions` as pre-authorized only for a fully specified `Ready` issue and its dedicated branch. The default permits commit, push, opening a pull request, and marking it ready; it does not permit merge or deploy.
+- Treat `workflow.softwareDelivery.agentActions` as pre-authorized only for a fully specified `Ready` issue and its dedicated linked worktree and branch. The default permits commit, push, opening a pull request, and marking it ready; it does not permit merge or deploy.
+- Treat `scopedChangesAccounted: true` as an assertion, not proof. The live `git-baseline`, `worktree-isolated`, and `scope-clean` gates must also pass.
 - Do not ask for manager acceptance while implementation exists only in the working tree, the pull request is draft, or CI is incomplete.
-- Before moving a parent to `In Review`, build current aggregate evidence and require `validate-software-delivery.mjs --target in-review` to pass.
-- After any commit, push, material PR update, merge, or deployment, invalidate older manager acceptance. Before `Done`, re-read Git/PR/deployment state and require `validate-software-delivery.mjs --target done` to pass.
+- Before moving a parent to `In Review`, build current aggregate evidence from the recorded baseline through current HEAD and require the live validator with `--target in-review`, `--baseline`, and `--repository` to pass.
+- After any commit, push, material PR update, merge, or deployment, invalidate older manager acceptance. Before `Done`, re-read Git/PR/deployment state and require the live validator with `--target done`, `--baseline`, and `--repository` to pass.
 - A missing Git permission or required external action is an explicit blocker. Do not convert local test evidence into delivered completion.
 
 ## Stop conditions

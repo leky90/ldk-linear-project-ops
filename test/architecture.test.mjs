@@ -30,7 +30,10 @@ test("repository is the canonical reusable plugin source", async () => {
   }
   for (const required of [
     "references/software-delivery-policy.md",
+    "schemas/git-worktree-baseline.schema.json",
     "schemas/software-delivery-evidence.schema.json",
+    "scripts/capture-git-baseline.mjs",
+    "scripts/git-delivery-state.mjs",
     "scripts/validate-software-delivery.mjs",
     "tests/fixtures/valid-software-delivery.json",
   ]) {

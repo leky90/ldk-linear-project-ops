@@ -36,7 +36,7 @@ The `key` is immutable and unique within the project. Match by explicit Linear I
 - `Ready`: fully specified, claimable, and unblocked.
 - `In Progress`: a verified active claim exists.
 - `Blocked`: execution cannot advance and the blocker is explicit.
-- `In Review`: domain delivery evidence is complete and manager acceptance is pending. For `software.change`, the configured commit/push/PR/CI review gate must pass.
+- `In Review`: domain delivery evidence is complete and manager acceptance is pending. For `software.change`, the live baseline/isolation/scope-clean and configured commit/push/PR/CI review gates must pass.
 - `Done`: accepted completion after every domain delivery gate passes. For `software.change`, acceptance must be newer than the latest delivery change and the configured merge/deployment gate must pass.
 - `Canceled`: intentionally abandoned or superseded.
 

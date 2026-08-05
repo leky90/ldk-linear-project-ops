@@ -36,6 +36,14 @@ agent authority while allowing a Ready issue to flow autonomously through branch
 commit, push, PR, and CI. Manager acceptance is timestamped against the latest
 delivery change so an older approval cannot close newer code.
 
+Each claimed software parent uses one linked Git worktree shared only by its
+related child chain. A clean baseline artifact binds the issue to repository,
+worktree, branch, and base commit. State validation re-reads live Git, requires a
+clean worktree and current-HEAD commit, and rejects paths outside the issue's
+declared resource prefixes. Dirty or untracked files in another worktree are
+therefore quarantined rather than adopted, stashed, deleted, or accidentally
+committed.
+
 ## Safety invariants
 
 - Plan-driven writes require current explicit approval and `approved: true`.
@@ -43,5 +51,7 @@ delivery change so an older approval cannot close newer code.
 - Stable keys and re-reads make writes idempotent and verifiable.
 - Claim tokens never leave local session memory.
 - Software states cannot advance from local-only evidence or stale acceptance.
+- Software states cannot advance from a self-reported scope boolean without live
+  baseline, isolation, and scope-clean verification.
 - Secrets, credentials, customer PII, and real project fixtures are forbidden in
   the plugin package.

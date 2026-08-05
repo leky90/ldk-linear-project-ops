@@ -40,15 +40,20 @@ The plugin accesses Linear through the host's connected OAuth app. It does not r
 Software issues do not become complete from working-tree changes or local tests
 alone. The default binding policy authorizes an agent handling a `Ready`
 `software.change` issue to commit, push, open a pull request, and mark it ready on
-an issue branch. Parent `In Review` requires commit/push/review-ready PR/CI
-evidence; parent `Done` requires current manager acceptance after the latest
-delivery change and a merged PR. Deployment is also required when the issue or
-binding says so.
+an issue branch inside a dedicated linked Git worktree. A baseline captured before
+editing binds the issue, repository, worktree, branch, and base commit. Parent `In
+Review` requires the live worktree to be clean, current HEAD to match the evidence,
+the verified commit range to stay inside declared resource paths, and the existing
+commit/push/review-ready PR/CI evidence. Parent `Done` requires current manager
+acceptance after the latest delivery change and a merged PR. Deployment is also
+required when the issue or binding says so.
 
 Consumers may refine these actions and gates in
 `workflow.softwareDelivery`. Before any software state transition, the execution
 and reconciliation skills invoke `scripts/validate-software-delivery.mjs` against
-current evidence.
+current evidence, the local baseline artifact, and live Git state. Pre-existing
+dirty or untracked files remain in the original worktree and cannot enter a newly
+claimed issue's isolated worktree.
 
 ## Claude Code setup
 

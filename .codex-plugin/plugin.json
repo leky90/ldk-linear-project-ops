@@ -1,6 +1,6 @@
 {
   "name": "ldk-linear-project-ops",
-  "version": "0.3.0+codex.20260805120131",
+  "version": "0.4.0+codex.20260805155849",
   "description": "Reusable closed-loop Linear planning, coordination, execution, reconciliation, and reporting for Codex and Claude Code.",
   "author": {
     "name": "LDKTech Solutions"
@@ -17,6 +17,7 @@
       "Issue triage",
       "Agent coordination",
       "Software delivery gates",
+      "Git worktree isolation",
       "Project reporting"
     ],
     "defaultPrompt": [

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ldktech.dev/schemas/linear-git-worktree-baseline.schema.json",
+  "title": "Linear Git Worktree Baseline",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "issueId",
+    "capturedAt",
+    "repositoryId",
+    "worktreeId",
+    "worktreeMode",
+    "branchName",
+    "baselineCommit",
+    "clean",
+    "statusHash",
+    "baselineId"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "linear-git-worktree-baseline" },
+    "issueId": { "type": "string", "minLength": 1 },
+    "capturedAt": { "type": "string", "format": "date-time" },
+    "repositoryId": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "worktreeId": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "worktreeMode": { "enum": ["primary-worktree", "linked-worktree"] },
+    "branchName": { "type": "string", "minLength": 1 },
+    "baselineCommit": { "type": "string", "pattern": "^[0-9a-fA-F]{7,64}$" },
+    "clean": { "const": true },
+    "statusHash": { "const": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" },
+    "baselineId": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

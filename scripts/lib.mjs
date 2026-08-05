@@ -20,6 +20,9 @@ const SOFTWARE_DELIVERY_ACTIONS = new Set([
 const CHILD_DONE_GATES = new Set([
   "acceptance-criteria",
   "scoped-changes-accounted",
+  "git-baseline",
+  "worktree-isolated",
+  "scope-clean",
   "commit",
 ]);
 const REVIEW_GATES = new Set([
@@ -37,10 +40,20 @@ const DONE_GATES = new Set([
 
 export const DEFAULT_SOFTWARE_DELIVERY_POLICY = Object.freeze({
   agentActions: Object.freeze(["commit", "push", "open-pull-request", "mark-pull-request-ready"]),
-  childDoneRequires: Object.freeze(["acceptance-criteria", "scoped-changes-accounted", "commit"]),
+  childDoneRequires: Object.freeze([
+    "acceptance-criteria",
+    "scoped-changes-accounted",
+    "git-baseline",
+    "worktree-isolated",
+    "scope-clean",
+    "commit",
+  ]),
   reviewRequires: Object.freeze([
     "acceptance-criteria",
     "scoped-changes-accounted",
+    "git-baseline",
+    "worktree-isolated",
+    "scope-clean",
     "commit",
     "push",
     "pull-request",
@@ -49,6 +62,7 @@ export const DEFAULT_SOFTWARE_DELIVERY_POLICY = Object.freeze({
   ]),
   doneRequires: Object.freeze(["manager-acceptance", "acceptance-after-last-delivery", "merge"]),
   deployment: "when-required",
+  worktreeIsolation: "required",
 });
 
 export async function readJson(path) {
@@ -189,6 +203,7 @@ export function resolveSoftwareDeliveryPolicy(binding) {
     reviewRequires: [...(configured.reviewRequires ?? DEFAULT_SOFTWARE_DELIVERY_POLICY.reviewRequires)],
     doneRequires: [...(configured.doneRequires ?? DEFAULT_SOFTWARE_DELIVERY_POLICY.doneRequires)],
     deployment: configured.deployment ?? DEFAULT_SOFTWARE_DELIVERY_POLICY.deployment,
+    worktreeIsolation: configured.worktreeIsolation ?? DEFAULT_SOFTWARE_DELIVERY_POLICY.worktreeIsolation,
   };
 }
 
@@ -197,7 +212,14 @@ export function validateSoftwareDeliveryPolicy(policy, { optional = false, locat
   if (!policy || typeof policy !== "object" || Array.isArray(policy)) return [`${location} must be an object`];
 
   const errors = [];
-  const allowedFields = new Set(["agentActions", "childDoneRequires", "reviewRequires", "doneRequires", "deployment"]);
+  const allowedFields = new Set([
+    "agentActions",
+    "childDoneRequires",
+    "reviewRequires",
+    "doneRequires",
+    "deployment",
+    "worktreeIsolation",
+  ]);
   for (const field of Object.keys(policy)) {
     if (!allowedFields.has(field)) errors.push(`${location}.${field} is not supported`);
   }
@@ -208,10 +230,25 @@ export function validateSoftwareDeliveryPolicy(policy, { optional = false, locat
   if (!new Set(["never", "when-required", "always"]).has(policy.deployment)) {
     errors.push(`${location}.deployment is invalid`);
   }
+  if (!new Set(["required", "allow-clean-primary"]).has(policy.worktreeIsolation)) {
+    errors.push(`${location}.worktreeIsolation is invalid`);
+  }
 
   for (const [field, required] of [
-    ["childDoneRequires", ["acceptance-criteria", "scoped-changes-accounted"]],
-    ["reviewRequires", ["acceptance-criteria", "scoped-changes-accounted"]],
+    ["childDoneRequires", [
+      "acceptance-criteria",
+      "scoped-changes-accounted",
+      "git-baseline",
+      "worktree-isolated",
+      "scope-clean",
+    ]],
+    ["reviewRequires", [
+      "acceptance-criteria",
+      "scoped-changes-accounted",
+      "git-baseline",
+      "worktree-isolated",
+      "scope-clean",
+    ]],
     ["doneRequires", ["manager-acceptance", "acceptance-after-last-delivery"]],
   ]) {
     if (!Array.isArray(policy[field])) continue;
@@ -222,10 +259,10 @@ export function validateSoftwareDeliveryPolicy(policy, { optional = false, locat
   return [...new Set(errors)];
 }
 
-export function validateSoftwareDelivery(evidence, { target = "in-review", binding } = {}) {
+export function validateSoftwareDelivery(evidence, { target = "in-review", binding, gitValidation } = {}) {
   const errors = [];
   if (!evidence || typeof evidence !== "object" || Array.isArray(evidence)) return ["evidence must be an object"];
-  if (evidence.schemaVersion !== 1) errors.push("schemaVersion must be 1");
+  if (evidence.schemaVersion !== 2) errors.push("schemaVersion must be 2");
   if (evidence.kind !== "linear-software-delivery-evidence") errors.push("kind must be linear-software-delivery-evidence");
   if (typeof evidence.issueId !== "string" || !evidence.issueId.trim()) errors.push("issueId is required");
   if (!Array.isArray(evidence.capabilities) || !evidence.capabilities.includes("software.change")) {
@@ -247,6 +284,12 @@ export function validateSoftwareDelivery(evidence, { target = "in-review", bindi
       errors.push("acceptance criteria are not verified");
     } else if (gate === "scoped-changes-accounted" && evidence.scopedChangesAccounted !== true) {
       errors.push("scoped changes are not fully accounted");
+    } else if (gate === "git-baseline" && gitValidation?.baselineRecorded !== true) {
+      errors.push("a verified Git baseline is required");
+    } else if (gate === "worktree-isolated" && gitValidation?.isolationSatisfied !== true) {
+      errors.push("the Git worktree isolation gate is not satisfied");
+    } else if (gate === "scope-clean" && gitValidation?.scopeClean !== true) {
+      errors.push("the live Git scope is not clean and fully committed");
     } else if (gate === "commit" && (typeof evidence.commitSha !== "string" || !/^[0-9a-f]{7,64}$/iu.test(evidence.commitSha))) {
       errors.push("a valid commitSha is required");
     } else if (gate === "push" && (evidence.branchPushed !== true || typeof evidence.branchName !== "string" || !evidence.branchName.trim())) {
