@@ -27,11 +27,21 @@ filesystem. The database path is consumer-relative and ignored by Git. Teams run
 agents across machines must provide a shared atomic lease backend; Linear comments
 remain an explicitly weaker optimistic fallback.
 
+## Delivery layer
+
+Domain completion is separate from claim ownership and local verification. For
+`software.change`, a deterministic evidence validator applies consumer-configured
+child, review, and done gates. The default keeps merge and deployment outside
+agent authority while allowing a Ready issue to flow autonomously through branch,
+commit, push, PR, and CI. Manager acceptance is timestamped against the latest
+delivery change so an older approval cannot close newer code.
+
 ## Safety invariants
 
 - Plan-driven writes require current explicit approval and `approved: true`.
 - Project identity comes only from the immutable consumer binding.
 - Stable keys and re-reads make writes idempotent and verifiable.
 - Claim tokens never leave local session memory.
+- Software states cannot advance from local-only evidence or stale acceptance.
 - Secrets, credentials, customer PII, and real project fixtures are forbidden in
   the plugin package.

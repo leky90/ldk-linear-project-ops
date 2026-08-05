@@ -19,6 +19,13 @@
       "parent": "agent:parent",
       "subIssue": "agent:sub-issue",
       "decision": "manager:decision"
+    },
+    "softwareDelivery": {
+      "agentActions": ["commit", "push", "open-pull-request", "mark-pull-request-ready"],
+      "childDoneRequires": ["acceptance-criteria", "scoped-changes-accounted", "commit"],
+      "reviewRequires": ["acceptance-criteria", "scoped-changes-accounted", "commit", "push", "pull-request", "non-draft-pull-request", "ci"],
+      "doneRequires": ["manager-acceptance", "acceptance-after-last-delivery", "merge"],
+      "deployment": "when-required"
     }
   },
   "coordination": {

@@ -36,11 +36,16 @@ The `key` is immutable and unique within the project. Match by explicit Linear I
 - `Ready`: fully specified, claimable, and unblocked.
 - `In Progress`: a verified active claim exists.
 - `Blocked`: execution cannot advance and the blocker is explicit.
-- `In Review`: evidence is complete and manager acceptance is pending.
-- `Done`: accepted completion.
+- `In Review`: domain delivery evidence is complete and manager acceptance is pending. For `software.change`, the configured commit/push/PR/CI review gate must pass.
+- `Done`: accepted completion after every domain delivery gate passes. For `software.change`, acceptance must be newer than the latest delivery change and the configured merge/deployment gate must pass.
 - `Canceled`: intentionally abandoned or superseded.
 
 Do not auto-promote parent issues from `In Review` to `Done`.
+
+For software work, apply [software-delivery-policy.md](software-delivery-policy.md).
+Child completion may represent an independently committed execution step, but a
+parent cannot enter review from working-tree or test-only evidence. A draft PR is
+not ready for review unless the consumer binding explicitly removes that gate.
 
 ## Required labels
 
@@ -52,4 +57,4 @@ Add domain labels such as `area:marketing`, `area:product`, `area:operations`, o
 
 ## Secrets and evidence
 
-Never store API keys, credentials, access tokens, customer PII, or raw confidential datasets in Linear descriptions, comments, labels, resource URLs, plans, logs, or claim records. Store durable evidence as a repository path, commit/PR URL, document URL, test artifact, or concise verified result.
+Never store API keys, credentials, access tokens, customer PII, or raw confidential datasets in Linear descriptions, comments, labels, resource URLs, plans, logs, or claim records. Store durable evidence as a repository path, commit/PR URL, document URL, test artifact, or concise verified result. A repository path or local test result alone does not satisfy a software review or done gate.

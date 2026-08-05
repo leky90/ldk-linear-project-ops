@@ -14,6 +14,7 @@ State how this step advances the parent.
 
 - Independently verifiable result.
 - Durable evidence URI.
+- For `software.change`: scoped changes are fully accounted and anchored to a commit before Done.
 
 ## Dependencies
 

@@ -25,17 +25,17 @@ function handle(name, payload, binding) {
   if (name === "UserPromptSubmit") {
     const prompt = String(payload.prompt ?? payload.userPrompt ?? "");
     if (!/(?:linear|milestone|issue|task|brainstorm|feature|goal|mục tiêu|công việc|kế hoạch|tính năng)/iu.test(prompt)) return "";
-    return wrap(attributes, "For planning or brainstorming, draft with $linear-capture-brainstorm and do not mutate Linear until explicit approval. For execution, require a verified claim.");
+    return wrap(attributes, "For planning or brainstorming, draft with $linear-capture-brainstorm and do not mutate Linear until explicit approval. For execution, use $linear-execute-goal-chain: claim internally, begin work immediately, and do not let paused automation block an interactive request.");
   }
   const toolName = String(payload.tool_name ?? payload.toolName ?? "");
   if (name === "PreToolUse" && isMutation(toolName)) {
-    return wrap(attributes, "Before this Linear mutation, verify exact project/team IDs, current state, approval authority, stable key, resource conflicts, and absence of secrets.");
+    return wrap(attributes, "Before this Linear mutation, verify exact project/team IDs, current state, approval authority, stable key, resource conflicts, and absence of secrets. For a software status transition, require the matching deterministic delivery gate.");
   }
   if (name === "PostToolUse" && isMutation(toolName)) {
     return wrap(attributes, "Re-read every affected Linear entity now. Report actual created, updated, skipped, conflicted, and failed results.");
   }
   if (name === "Stop") {
-    return wrap(attributes, "If Linear work occurred, release or preserve the claim explicitly, attach evidence, reconcile parent/child state, and summarize remaining work.");
+    return wrap(attributes, "If Linear work occurred, release or preserve the claim explicitly, attach evidence, reconcile parent/child state, and summarize remaining work. For software.change, do not report child Done, parent In Review, or parent Done until the corresponding validate-software-delivery gate passes.");
   }
   return "";
 }

@@ -7,7 +7,16 @@ import { spawn } from "node:child_process";
 import test from "node:test";
 
 import { buildProjectReport } from "../scripts/build-project-report.mjs";
-import { readJson, stableKey, validateDecomposition, validatePlan, validateProjectBinding } from "../scripts/lib.mjs";
+import {
+  DEFAULT_SOFTWARE_DELIVERY_POLICY,
+  readJson,
+  resolveSoftwareDeliveryPolicy,
+  stableKey,
+  validateDecomposition,
+  validatePlan,
+  validateProjectBinding,
+  validateSoftwareDelivery,
+} from "../scripts/lib.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixture = (name) => join(here, "fixtures", name);
@@ -25,6 +34,52 @@ test("example consumer binding is valid and contains no credentials", async () =
   assert.deepEqual(validateProjectBinding(binding, { allowPlaceholders: true }), []);
   assert.match(validateProjectBinding(binding).join("\n"), /placeholder/u);
   assert.doesNotMatch(JSON.stringify(binding), /api.?key|password|credential|access.?token/iu);
+  assert.deepEqual(resolveSoftwareDeliveryPolicy(binding), DEFAULT_SOFTWARE_DELIVERY_POLICY);
+});
+
+test("software delivery policy rejects unsafe or unknown completion gates", async () => {
+  const binding = await readJson(join(here, "..", "examples", "project-binding.example.json"));
+  binding.workflow.softwareDelivery.doneRequires = ["merge"];
+  assert.match(validateProjectBinding(binding, { allowPlaceholders: true }).join("\n"), /must include manager-acceptance/u);
+
+  binding.workflow.softwareDelivery.doneRequires = ["manager-acceptance", "acceptance-after-last-delivery", "merge"];
+  binding.workflow.softwareDelivery.reviewRequires.push("local-tests-only");
+  assert.match(validateProjectBinding(binding, { allowPlaceholders: true }).join("\n"), /invalid value local-tests-only/u);
+});
+
+test("software child completion requires verified scoped work anchored to a commit", async () => {
+  const evidence = await readJson(fixture("valid-software-delivery.json"));
+  assert.deepEqual(validateSoftwareDelivery(evidence, { target: "child-done" }), []);
+
+  evidence.commitSha = "";
+  assert.match(validateSoftwareDelivery(evidence, { target: "child-done" }).join("\n"), /commitSha is required/u);
+});
+
+test("software parent cannot enter review with a draft PR or incomplete CI", async () => {
+  const evidence = await readJson(fixture("valid-software-delivery.json"));
+  evidence.pullRequest.draft = true;
+  evidence.pullRequest.ciStatus = "pending";
+  const errors = validateSoftwareDelivery(evidence, { target: "in-review" }).join("\n");
+  assert.match(errors, /must be ready for review/u);
+  assert.match(errors, /CI must pass/u);
+});
+
+test("software parent cannot be Done from acceptance older than delivery", async () => {
+  const evidence = await readJson(fixture("valid-software-delivery.json"));
+  evidence.managerAcceptance.acceptedAt = "2026-01-02T02:00:00.000Z";
+  assert.match(validateSoftwareDelivery(evidence, { target: "done" }).join("\n"), /predates the latest delivery change/u);
+});
+
+test("software parent Done requires merge and required deployment evidence", async () => {
+  const evidence = await readJson(fixture("valid-software-delivery.json"));
+  assert.deepEqual(validateSoftwareDelivery(evidence, { target: "done" }), []);
+
+  evidence.pullRequest.merged = false;
+  assert.match(validateSoftwareDelivery(evidence, { target: "done" }).join("\n"), /must be merged/u);
+
+  evidence.pullRequest.merged = true;
+  evidence.deployment.required = true;
+  assert.match(validateSoftwareDelivery(evidence, { target: "done" }).join("\n"), /deployment is not verified/u);
 });
 
 test("valid draft plan passes but cannot be applied before approval", async () => {

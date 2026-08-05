@@ -5,7 +5,9 @@ description: Select and claim one safe focus parent plus its next runnable child
 
 # Linear Focus Claim
 
-Acquire one bounded focus before doing work. Reading or assigning an issue is not an atomic claim.
+Acquire one bounded focus immediately before doing work. Reading or assigning an issue is not an atomic claim. Treat this skill as an execution subroutine, not the normal user-facing endpoint; ordinary requests to perform an issue route through `$linear-execute-goal-chain`.
+
+Do not claim when the current run cannot begin execution immediately. `Automation paused` disables scheduled pickup only; it does not block an explicitly requested interactive run. Claim-only operation is reserved for explicit coordination debugging, and must release before the run ends.
 
 ## Select candidates
 
@@ -25,4 +27,4 @@ Follow [claim-protocol.md](../../references/claim-protocol.md).
 - Claim one focus parent and at most one executable child at a time.
 - On conflict, release or abandon your marker and select another non-conflicting candidate.
 
-Return the focus parent, active child, run ID, lease expiry, resources, blockers, and stop conditions. Do not edit project files until the claim is verified.
+Return the focus parent, active child, run ID, lease expiry, resources, blockers, and stop conditions to the execution caller. Do not edit project files until the claim is verified. After verification, begin the bounded work immediately; never claim and end the task without execution, heartbeat, or release.

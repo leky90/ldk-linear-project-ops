@@ -16,7 +16,7 @@ does not bind to or operate any real Linear project.
 - `skills/`: nine composable Linear operation skills.
 - `references/`: approval, data model, priority, decomposition, host, and claim rules.
 - `schemas/`: project binding, planning, and decomposition contracts.
-- `scripts/`: deterministic validators, reporting, hooks, stable keys, and claim lock.
+- `scripts/`: deterministic validators, software-delivery gates, reporting, hooks, stable keys, and claim lock.
 - `assets/`: neutral templates and example plans.
 - `examples/`: copyable consumer configuration with placeholder IDs.
 - `tests/`: plugin behavior fixtures and tests.
@@ -34,6 +34,21 @@ is project state, not plugin source, and must remain uncommitted.
 
 The plugin accesses Linear through the host's connected OAuth app. It does not read
 `LINEAR_API_KEY` and does not include a Linear API client.
+
+## Software delivery gates
+
+Software issues do not become complete from working-tree changes or local tests
+alone. The default binding policy authorizes an agent handling a `Ready`
+`software.change` issue to commit, push, open a pull request, and mark it ready on
+an issue branch. Parent `In Review` requires commit/push/review-ready PR/CI
+evidence; parent `Done` requires current manager acceptance after the latest
+delivery change and a merged PR. Deployment is also required when the issue or
+binding says so.
+
+Consumers may refine these actions and gates in
+`workflow.softwareDelivery`. Before any software state transition, the execution
+and reconciliation skills invoke `scripts/validate-software-delivery.mjs` against
+current evidence.
 
 ## Claude Code setup
 

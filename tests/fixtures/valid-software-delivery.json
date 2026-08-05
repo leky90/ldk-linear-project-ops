@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "kind": "linear-software-delivery-evidence",
+  "issueId": "EXAMPLE-123",
+  "capabilities": ["software.change"],
+  "acceptanceCriteriaVerified": true,
+  "scopedChangesAccounted": true,
+  "commitSha": "0123456789abcdef0123456789abcdef01234567",
+  "branchName": "agent/example-123",
+  "branchPushed": true,
+  "pullRequest": {
+    "url": "https://example.invalid/pull/123",
+    "draft": false,
+    "ciStatus": "passed",
+    "merged": true
+  },
+  "lastDeliveryChangeAt": "2026-01-02T03:04:05.000Z",
+  "managerAcceptance": {
+    "accepted": true,
+    "acceptedAt": "2026-01-02T04:00:00.000Z"
+  },
+  "deployment": {
+    "required": false,
+    "verified": false
+  }
+}

@@ -28,7 +28,11 @@ For structured plans, require both:
 
 ## Execution updates
 
-After a manager has placed a fully specified issue in `Ready`, normal claim, heartbeat, evidence, child-state, and reconciliation updates are pre-authorized within that issue's scope. New deliverables, new external publication, production changes, credentials, money, or irreversible actions still require the authority demanded by the issue and repository policy.
+After a manager has placed a fully specified issue in `Ready`, normal claim, heartbeat, evidence, child-state, and reconciliation updates are pre-authorized within that issue's scope.
+
+For `software.change`, the consumer binding's `workflow.softwareDelivery.agentActions` is also explicit execution authority. The default authorizes commit, push, opening a pull request, and marking it ready on a dedicated issue branch. Actions outside that list—including merge and deploy by default—still require explicit authority. Never downgrade a missing external action into local-only `Done` evidence.
+
+New deliverables outside the approved issue, credentials, money, production changes not authorized by the delivery policy, or other irreversible actions still require the authority demanded by the issue and repository policy.
 
 ## Material drift
 
@@ -43,3 +47,5 @@ Re-preview and request renewed approval if the apply-time diff changes:
 ## Verification
 
 After every write, re-read the affected entity. Report actual created, updated, skipped, conflicted, and failed items. Never infer success from a mutation request alone.
+
+Manager acceptance of software is valid only against identified delivery evidence. If a later commit, force-push, material PR update, merge, or deployment changes that evidence, request acceptance again before `Done`.

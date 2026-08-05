@@ -9,6 +9,48 @@ const SECRET_VALUE_PATTERNS = [
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/u
 ];
 
+const SOFTWARE_DELIVERY_ACTIONS = new Set([
+  "commit",
+  "push",
+  "open-pull-request",
+  "mark-pull-request-ready",
+  "merge",
+  "deploy",
+]);
+const CHILD_DONE_GATES = new Set([
+  "acceptance-criteria",
+  "scoped-changes-accounted",
+  "commit",
+]);
+const REVIEW_GATES = new Set([
+  ...CHILD_DONE_GATES,
+  "push",
+  "pull-request",
+  "non-draft-pull-request",
+  "ci",
+]);
+const DONE_GATES = new Set([
+  "manager-acceptance",
+  "acceptance-after-last-delivery",
+  "merge",
+]);
+
+export const DEFAULT_SOFTWARE_DELIVERY_POLICY = Object.freeze({
+  agentActions: Object.freeze(["commit", "push", "open-pull-request", "mark-pull-request-ready"]),
+  childDoneRequires: Object.freeze(["acceptance-criteria", "scoped-changes-accounted", "commit"]),
+  reviewRequires: Object.freeze([
+    "acceptance-criteria",
+    "scoped-changes-accounted",
+    "commit",
+    "push",
+    "pull-request",
+    "non-draft-pull-request",
+    "ci",
+  ]),
+  doneRequires: Object.freeze(["manager-acceptance", "acceptance-after-last-delivery", "merge"]),
+  deployment: "when-required",
+});
+
 export async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
@@ -108,6 +150,7 @@ export function validateProjectBinding(binding, { allowPlaceholders = false } = 
     for (const field of ["parent", "subIssue", "decision"]) {
       if (typeof workflow.labels?.[field] !== "string" || !workflow.labels[field].trim()) errors.push(`workflow.labels.${field} is required`);
     }
+    errors.push(...validateSoftwareDeliveryPolicy(workflow.softwareDelivery, { optional: true }));
   }
 
   const coordination = binding.coordination;
@@ -136,6 +179,129 @@ export function validateProjectBinding(binding, { allowPlaceholders = false } = 
   const secretPaths = findSecretPaths(binding);
   if (secretPaths.length) errors.push(`secret-like data is forbidden at: ${[...new Set(secretPaths)].join(", ")}`);
   return [...new Set(errors)];
+}
+
+export function resolveSoftwareDeliveryPolicy(binding) {
+  const configured = binding?.workflow?.softwareDelivery ?? {};
+  return {
+    agentActions: [...(configured.agentActions ?? DEFAULT_SOFTWARE_DELIVERY_POLICY.agentActions)],
+    childDoneRequires: [...(configured.childDoneRequires ?? DEFAULT_SOFTWARE_DELIVERY_POLICY.childDoneRequires)],
+    reviewRequires: [...(configured.reviewRequires ?? DEFAULT_SOFTWARE_DELIVERY_POLICY.reviewRequires)],
+    doneRequires: [...(configured.doneRequires ?? DEFAULT_SOFTWARE_DELIVERY_POLICY.doneRequires)],
+    deployment: configured.deployment ?? DEFAULT_SOFTWARE_DELIVERY_POLICY.deployment,
+  };
+}
+
+export function validateSoftwareDeliveryPolicy(policy, { optional = false, location = "workflow.softwareDelivery" } = {}) {
+  if (policy === undefined && optional) return [];
+  if (!policy || typeof policy !== "object" || Array.isArray(policy)) return [`${location} must be an object`];
+
+  const errors = [];
+  const allowedFields = new Set(["agentActions", "childDoneRequires", "reviewRequires", "doneRequires", "deployment"]);
+  for (const field of Object.keys(policy)) {
+    if (!allowedFields.has(field)) errors.push(`${location}.${field} is not supported`);
+  }
+  validateEnumArray(policy.agentActions, `${location}.agentActions`, SOFTWARE_DELIVERY_ACTIONS, errors);
+  validateEnumArray(policy.childDoneRequires, `${location}.childDoneRequires`, CHILD_DONE_GATES, errors);
+  validateEnumArray(policy.reviewRequires, `${location}.reviewRequires`, REVIEW_GATES, errors);
+  validateEnumArray(policy.doneRequires, `${location}.doneRequires`, DONE_GATES, errors);
+  if (!new Set(["never", "when-required", "always"]).has(policy.deployment)) {
+    errors.push(`${location}.deployment is invalid`);
+  }
+
+  for (const [field, required] of [
+    ["childDoneRequires", ["acceptance-criteria", "scoped-changes-accounted"]],
+    ["reviewRequires", ["acceptance-criteria", "scoped-changes-accounted"]],
+    ["doneRequires", ["manager-acceptance", "acceptance-after-last-delivery"]],
+  ]) {
+    if (!Array.isArray(policy[field])) continue;
+    for (const gate of required) {
+      if (!policy[field].includes(gate)) errors.push(`${location}.${field} must include ${gate}`);
+    }
+  }
+  return [...new Set(errors)];
+}
+
+export function validateSoftwareDelivery(evidence, { target = "in-review", binding } = {}) {
+  const errors = [];
+  if (!evidence || typeof evidence !== "object" || Array.isArray(evidence)) return ["evidence must be an object"];
+  if (evidence.schemaVersion !== 1) errors.push("schemaVersion must be 1");
+  if (evidence.kind !== "linear-software-delivery-evidence") errors.push("kind must be linear-software-delivery-evidence");
+  if (typeof evidence.issueId !== "string" || !evidence.issueId.trim()) errors.push("issueId is required");
+  if (!Array.isArray(evidence.capabilities) || !evidence.capabilities.includes("software.change")) {
+    errors.push("capabilities must include software.change");
+  }
+  if (!new Set(["child-done", "in-review", "done"]).has(target)) errors.push(`target ${target} is invalid`);
+
+  const policy = resolveSoftwareDeliveryPolicy(binding);
+  errors.push(...validateSoftwareDeliveryPolicy(policy, { location: "softwareDelivery" }));
+  const gates = target === "child-done"
+    ? policy.childDoneRequires
+    : target === "in-review"
+      ? policy.reviewRequires
+      : [...new Set([...policy.reviewRequires, ...policy.doneRequires])];
+
+  const pullRequest = evidence.pullRequest ?? {};
+  for (const gate of gates) {
+    if (gate === "acceptance-criteria" && evidence.acceptanceCriteriaVerified !== true) {
+      errors.push("acceptance criteria are not verified");
+    } else if (gate === "scoped-changes-accounted" && evidence.scopedChangesAccounted !== true) {
+      errors.push("scoped changes are not fully accounted");
+    } else if (gate === "commit" && (typeof evidence.commitSha !== "string" || !/^[0-9a-f]{7,64}$/iu.test(evidence.commitSha))) {
+      errors.push("a valid commitSha is required");
+    } else if (gate === "push" && (evidence.branchPushed !== true || typeof evidence.branchName !== "string" || !evidence.branchName.trim())) {
+      errors.push("a named pushed branch is required");
+    } else if (gate === "pull-request" && (typeof pullRequest.url !== "string" || !/^https:\/\//u.test(pullRequest.url))) {
+      errors.push("a pull request URL is required");
+    } else if (gate === "non-draft-pull-request" && pullRequest.draft !== false) {
+      errors.push("the pull request must be ready for review");
+    } else if (gate === "ci" && pullRequest.ciStatus !== "passed") {
+      errors.push("pull request CI must pass");
+    } else if (gate === "manager-acceptance" && evidence.managerAcceptance?.accepted !== true) {
+      errors.push("manager acceptance is required");
+    } else if (gate === "acceptance-after-last-delivery") {
+      const acceptedAt = parseTimestamp(evidence.managerAcceptance?.acceptedAt);
+      const lastDeliveryChangeAt = parseTimestamp(evidence.lastDeliveryChangeAt);
+      if (acceptedAt === null || lastDeliveryChangeAt === null) {
+        errors.push("managerAcceptance.acceptedAt and lastDeliveryChangeAt must be valid timestamps");
+      } else if (acceptedAt < lastDeliveryChangeAt) {
+        errors.push("manager acceptance predates the latest delivery change");
+      }
+    } else if (gate === "merge" && pullRequest.merged !== true) {
+      errors.push("the pull request must be merged");
+    }
+  }
+
+  if (target === "done") {
+    const deployment = evidence.deployment ?? {};
+    if (policy.deployment === "always" && deployment.verified !== true) {
+      errors.push("verified deployment evidence is required");
+    }
+    if (policy.deployment === "when-required" && deployment.required === true && deployment.verified !== true) {
+      errors.push("required deployment is not verified");
+    }
+  }
+
+  const secrets = findSecretPaths(evidence);
+  if (secrets.length) errors.push(`secret-like data is forbidden at: ${[...new Set(secrets)].join(", ")}`);
+  return [...new Set(errors)];
+}
+
+function validateEnumArray(value, location, allowed, errors) {
+  if (!Array.isArray(value) || value.length === 0) {
+    errors.push(`${location} must be a non-empty array`);
+    return;
+  }
+  if (new Set(value).size !== value.length) errors.push(`${location} must contain unique values`);
+  for (const entry of value) {
+    if (!allowed.has(entry)) errors.push(`${location} contains invalid value ${entry}`);
+  }
+}
+
+function parseTimestamp(value) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? null : timestamp;
 }
 
 export function detectCycles(keys, dependencies) {

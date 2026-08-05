@@ -9,7 +9,7 @@
       "name": "ldk-linear-project-ops",
       "source": "./",
       "description": "Closed-loop Linear planning and agent coordination for Claude Code.",
-      "version": "0.2.0"
+      "version": "0.3.0"
     }
   ]
 }

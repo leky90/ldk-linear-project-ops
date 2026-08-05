@@ -28,6 +28,14 @@ test("repository is the canonical reusable plugin source", async () => {
   for (const required of ["skills", "references", "schemas", "scripts", "assets", "examples", "tests", "hooks/hooks.json"]) {
     await access(join(root, required));
   }
+  for (const required of [
+    "references/software-delivery-policy.md",
+    "schemas/software-delivery-evidence.schema.json",
+    "scripts/validate-software-delivery.mjs",
+    "tests/fixtures/valid-software-delivery.json",
+  ]) {
+    await access(join(root, required));
+  }
 });
 
 test("source repository contains no live project binding", async () => {
