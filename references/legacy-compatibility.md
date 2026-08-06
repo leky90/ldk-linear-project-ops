@@ -1,6 +1,8 @@
 # Legacy compatibility
 
-Read old plugin bindings and issue metadata conservatively; write only the role-based v1 format.
+Read old plugin bindings and issue metadata conservatively; write only schema-v2 work plans and role-based handoffs.
+
+Map legacy issue type `initiative` to `outcome`. Promote it to a native Linear Initiative only when it is truly a strategic objective spanning multiple Projects.
 
 ## Binding
 

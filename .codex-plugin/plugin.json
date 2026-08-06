@@ -1,29 +1,32 @@
 {
   "name": "ldk-linear-project-ops",
-  "version": "1.0.0+codex.20260805183012",
-  "description": "Role-based Linear work creation, execution, handoff, review, and project reporting for Codex and Claude Code.",
+  "version": "1.1.0+codex.20260806040053",
+  "description": "Role-based Linear delivery with native initiatives, milestones, planning properties, project updates, and safe legacy cleanup.",
   "author": {
     "name": "LDKTech Solutions"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "Linear Project Ops",
-    "shortDescription": "Perform Linear work as the role responsible for each stage.",
-    "longDescription": "A human-oriented workflow for creating role-owned work, performing one issue according to its state and resources, handing it to the next role, reviewing Definition of Done evidence, and reporting project queues.",
+    "displayName": "Linear RoleFlow",
+    "shortDescription": "Plan and deliver work through role-based Linear handoffs.",
+    "longDescription": "A human-oriented workflow that maps strategy to native Linear initiatives, projects, milestones and issues; performs one issue according to its responsible role; hands work to the next role; publishes evidence-based project updates; and safely cleans legacy artifacts.",
     "developerName": "LDKTech Solutions",
     "category": "Productivity",
     "capabilities": [
       "Role-based issue creation",
+      "Native initiative and milestone planning",
+      "Assignee, estimate, cycle and due-date planning",
       "Issue execution and handoff",
       "Definition of Ready and Done",
       "Human-readable review comments",
       "Internal concurrency protection",
-      "Project reporting"
+      "Native project updates and health",
+      "Preview-first legacy cleanup"
     ],
     "defaultPrompt": [
-      "Create role-owned Linear issues and resources from this product brief.",
+      "Create native Linear initiatives, milestones, resources, and role-owned issues from this product brief.",
       "Perform issue LDK-123 according to its current role and state.",
-      "Report project progress by role, review queue, blockers, and priorities."
+      "Publish a project update with health, progress, risks, evidence, and next steps."
     ]
   }
 }

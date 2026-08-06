@@ -6,7 +6,7 @@ Use the issue's single `role:*` label as the current owner role. Use `reviewer:*
 
 | Current role | Typical deliverable | Default next role |
 |---|---|---|
-| `cpo` | Product brief, PRD, initiative | `tech-lead` |
+| `cpo` | Product brief, PRD, native Initiative/Project, outcome issue | `tech-lead` |
 | `product-manager` | Refined requirements and acceptance scenarios | `tech-lead` |
 | `tech-lead` | Technical understanding, plan, role-owned sub-issues | task-specific role |
 | `software-engineer` | Tested implementation and PR | `qa` |

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "kind": "linear-legacy-cleanup-plan",
+  "mode": "preview",
+  "projectId": "project-1",
+  "planId": "legacy-cleanup-2026-08-06",
+  "snapshotAt": "2026-08-06T12:00:00.000Z",
+  "entries": [
+    {
+      "entityType": "issue",
+      "id": "EXAMPLE-10",
+      "action": "MERGE_THEN_DELETE",
+      "canonicalIssueId": "EXAMPLE-2",
+      "reason": "Duplicate agent time-slice issue with one useful evidence link.",
+      "preserve": ["Move the evidence link to EXAMPLE-2"],
+      "approved": false
+    },
+    {
+      "entityType": "comment",
+      "id": "comment-heartbeat-1",
+      "action": "DELETE_COMMENT",
+      "reason": "Machine heartbeat telemetry without business evidence.",
+      "preserve": [],
+      "approved": false
+    }
+  ]
+}

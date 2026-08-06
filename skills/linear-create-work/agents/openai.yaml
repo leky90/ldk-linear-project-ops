@@ -1,4 +1,4 @@
 interface:
   display_name: "Create Linear Work"
-  short_description: "Create role-ready work and supporting resources"
-  default_prompt: "Use $linear-create-work to create role-ready Linear issues and supporting resources."
+  short_description: "Plan native Linear hierarchy and role-owned work"
+  default_prompt: "Use $linear-create-work to plan or create native Linear initiatives, milestones, resources, and role-owned issues."

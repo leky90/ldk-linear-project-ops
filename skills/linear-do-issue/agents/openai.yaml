@@ -1,4 +1,4 @@
 interface:
   display_name: "Do Linear Issue"
   short_description: "Perform one issue as its responsible role"
-  default_prompt: "Use $linear-do-issue to perform the requested Linear issue and hand it off."
+  default_prompt: "Use $linear-do-issue to perform the requested Linear issue as its current responsible role and hand it off."

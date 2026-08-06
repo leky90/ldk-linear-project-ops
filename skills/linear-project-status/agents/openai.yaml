@@ -1,4 +1,4 @@
 interface:
   display_name: "Linear Project Status"
-  short_description: "Summarize progress by outcome, role, and handoff"
-  default_prompt: "Use $linear-project-status to summarize project progress, blockers, and role queues."
+  short_description: "Report progress or publish a native project update"
+  default_prompt: "Use $linear-project-status to report project progress or publish an evidence-based native Linear Project Update."

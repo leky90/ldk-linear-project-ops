@@ -3,8 +3,29 @@
   "project": {
     "id": "project-1",
     "name": "Example Product",
-    "url": "https://linear.app/example/project/demo"
+    "url": "https://linear.app/example/project/demo",
+    "status": "started",
+    "priority": "high",
+    "lead": "Product Lead",
+    "startDate": "2026-08-01",
+    "targetDate": "2026-09-15",
+    "latestUpdate": {
+      "health": "at-risk",
+      "summary": "Analytics naming still blocks final verification.",
+      "createdAt": "2026-08-06T10:00:00.000Z"
+    }
   },
+  "initiatives": [
+    {
+      "key": "demo.strategy.activation",
+      "name": "Improve product activation",
+      "status": "active",
+      "priority": "high",
+      "owner": "CPO",
+      "targetDate": "2026-12-31",
+      "url": "https://linear.app/example/initiative/activation"
+    }
+  ],
   "milestones": [
     {
       "key": "demo.milestone.onboarding",
@@ -15,14 +36,15 @@
   ],
   "issues": [
     {
-      "key": "demo.initiative.onboarding",
-      "type": "initiative",
+      "key": "demo.outcome.onboarding",
+      "type": "outcome",
       "title": "Improve onboarding",
       "status": "In Progress",
       "priority": "high",
       "ownerRole": "tech-lead",
       "reviewerRole": "cpo",
-      "milestoneKey": "demo.milestone.onboarding"
+      "milestoneKey": "demo.milestone.onboarding",
+      "estimate": 3
     },
     {
       "key": "demo.task.ui",
@@ -32,6 +54,10 @@
       "priority": "high",
       "ownerRole": "software-engineer",
       "reviewerRole": "qa",
+      "assignee": "Engineer A",
+      "cycleName": "Cycle 32",
+      "dueDate": "2026-08-15",
+      "estimate": 5,
       "milestoneKey": "demo.milestone.onboarding",
       "url": "https://linear.app/example/issue/EXAMPLE-2"
     },
@@ -43,6 +69,7 @@
       "priority": "normal",
       "ownerRole": "content-writer",
       "reviewerRole": "content-director",
+      "estimate": 2,
       "milestoneKey": "demo.milestone.onboarding"
     },
     {
@@ -53,7 +80,9 @@
       "priority": "normal",
       "ownerRole": "qa",
       "reviewerRole": "tech-lead",
+      "estimate": 3,
       "blocker": { "neededFrom": "CPO" },
+      "relations": { "blockedByKeys": ["demo.decision.metric"] },
       "milestoneKey": "demo.milestone.onboarding"
     },
     {
@@ -64,6 +93,7 @@
       "priority": "high",
       "ownerRole": "cpo",
       "reviewerRole": "tech-lead",
+      "estimate": 1,
       "milestoneKey": "demo.milestone.onboarding"
     },
     {
@@ -73,7 +103,8 @@
       "status": "Refinement",
       "priority": "normal",
       "ownerRole": "cpo",
-      "reviewerRole": "tech-lead"
+      "reviewerRole": "tech-lead",
+      "estimate": 1
     }
   ]
 }

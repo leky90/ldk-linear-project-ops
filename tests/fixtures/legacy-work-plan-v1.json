@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "kind": "linear-role-work-plan",
+  "mode": "preview",
+  "projectId": "project-1",
+  "teamId": "team-1",
+  "summary": "Legacy example plan.",
+  "resources": [
+    { "key": "legacy.resource.prd", "title": "Legacy PRD", "type": "document", "content": "Synthetic legacy requirements." }
+  ],
+  "issues": [
+    {
+      "key": "legacy.initiative.onboarding",
+      "type": "initiative",
+      "title": "Legacy onboarding parent",
+      "outcome": "Improve onboarding.",
+      "deliverable": "Implementation plan.",
+      "status": "Ready",
+      "priority": "high",
+      "ownerRole": "tech-lead",
+      "reviewerRole": "cpo",
+      "definitionOfReady": ["PRD is linked"],
+      "definitionOfDone": ["Tasks are reviewable"],
+      "resourceKeys": ["legacy.resource.prd"],
+      "blockedByKeys": []
+    }
+  ]
+}

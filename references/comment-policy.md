@@ -2,6 +2,9 @@
 
 Comments are handoff records for people, not an execution log.
 
+Project-level health and executive progress belong in native Linear Project Updates,
+not in an arbitrary issue comment. Validate the update before publishing it.
+
 ## Rules
 
 - Post at most one comment per completed role-phase.

@@ -1,73 +1,124 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://ldktech.dev/schemas/linear-role-work-plan.schema.json",
-  "title": "Linear Role Work Plan",
+  "$id": "https://ldktech.dev/schemas/linear-role-work-plan-v2.schema.json",
+  "title": "Linear RoleFlow Work Plan",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "kind", "mode", "projectId", "teamId", "summary", "resources", "issues"],
+  "required": ["schemaVersion", "kind", "mode", "project", "summary", "initiatives", "milestones", "resources", "issues"],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "kind": { "const": "linear-role-work-plan" },
     "mode": { "enum": ["preview", "apply"] },
-    "projectId": { "type": "string", "minLength": 1 },
-    "teamId": { "type": "string", "minLength": 1 },
     "summary": { "type": "string", "minLength": 1 },
-    "resources": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["key", "title", "type"],
-        "properties": {
-          "key": { "$ref": "#/$defs/key" },
-          "title": { "type": "string", "minLength": 1 },
-          "type": { "enum": ["document", "url", "repository", "reference"] },
-          "url": { "type": "string", "minLength": 1 },
-          "content": { "type": "string", "minLength": 1 }
-        }
-      }
-    },
-    "issues": {
-      "type": "array",
-      "minItems": 1,
-      "items": { "$ref": "#/$defs/issue" }
-    }
+    "project": { "$ref": "#/$defs/project" },
+    "initiatives": { "type": "array", "items": { "$ref": "#/$defs/initiative" } },
+    "milestones": { "type": "array", "items": { "$ref": "#/$defs/milestone" } },
+    "resources": { "type": "array", "items": { "$ref": "#/$defs/resource" } },
+    "issues": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/issue" } }
   },
   "$defs": {
     "key": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{2,95}$" },
     "role": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
-    "issue": {
+    "date": { "type": "string", "format": "date" },
+    "priority": { "enum": ["urgent", "high", "normal", "low", "none"] },
+    "project": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "key", "type", "title", "outcome", "deliverable", "status", "priority",
-        "ownerRole", "definitionOfReady", "definitionOfDone", "resourceKeys", "blockedByKeys"
-      ],
+      "required": ["id", "teamIds"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "teamIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "name": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "enum": ["planned", "started", "paused", "completed", "canceled"] },
+        "priority": { "$ref": "#/$defs/priority" },
+        "leadId": { "type": "string", "minLength": 1 },
+        "memberIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "startDate": { "$ref": "#/$defs/date" },
+        "targetDate": { "$ref": "#/$defs/date" },
+        "initiativeKeys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/key" } }
+      }
+    },
+    "initiative": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name", "objective", "status", "priority", "resourceKeys"],
       "properties": {
         "key": { "$ref": "#/$defs/key" },
         "linearId": { "type": "string", "minLength": 1 },
-        "type": { "enum": ["initiative", "task", "decision"] },
+        "name": { "type": "string", "minLength": 1 },
+        "objective": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "status": { "enum": ["proposed", "planned", "active", "completed", "canceled"] },
+        "priority": { "$ref": "#/$defs/priority" },
+        "ownerId": { "type": "string", "minLength": 1 },
+        "targetDate": { "$ref": "#/$defs/date" },
+        "labels": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "resourceKeys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/key" } }
+      }
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "linearId": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "targetDate": { "$ref": "#/$defs/date" }
+      }
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "title", "type"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "title": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["document", "url", "repository", "reference"] },
+        "url": { "type": "string", "minLength": 1 },
+        "content": { "type": "string", "minLength": 1 }
+      }
+    },
+    "relations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blockedByKeys", "relatedToKeys"],
+      "properties": {
+        "blockedByKeys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/key" } },
+        "relatedToKeys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/key" } },
+        "duplicateOfKey": { "$ref": "#/$defs/key" }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "type", "title", "outcome", "deliverable", "status", "priority", "ownerRole", "definitionOfReady", "definitionOfDone", "resourceKeys", "relations"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "linearId": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["outcome", "task", "decision"] },
         "parentKey": { "$ref": "#/$defs/key" },
         "title": { "type": "string", "minLength": 1 },
         "outcome": { "type": "string", "minLength": 1 },
         "context": { "type": "string" },
         "deliverable": { "type": "string", "minLength": 1 },
         "status": { "enum": ["Refinement", "Ready", "Blocked"] },
-        "priority": { "enum": ["urgent", "high", "normal", "low", "none"] },
+        "priority": { "$ref": "#/$defs/priority" },
         "ownerRole": { "$ref": "#/$defs/role" },
         "reviewerRole": { "$ref": "#/$defs/role" },
-        "definitionOfReady": {
-          "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }
-        },
-        "definitionOfDone": {
-          "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }
-        },
-        "resourceKeys": {
-          "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/key" }
-        },
-        "blockedByKeys": {
-          "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/key" }
-        }
+        "assigneeId": { "type": "string", "minLength": 1 },
+        "milestoneKey": { "$ref": "#/$defs/key" },
+        "cycleId": { "type": "string", "minLength": 1 },
+        "estimate": { "type": "number", "minimum": 0 },
+        "dueDate": { "$ref": "#/$defs/date" },
+        "labels": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "definitionOfReady": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "definitionOfDone": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "resourceKeys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/key" } },
+        "relations": { "$ref": "#/$defs/relations" }
       }
     }
   }

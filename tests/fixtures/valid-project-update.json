@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "kind": "linear-project-update",
+  "mode": "preview",
+  "projectId": "project-1",
+  "health": "at-risk",
+  "summary": "Implementation is progressing, but analytics naming blocks final verification.",
+  "progress": ["Product brief approved", "Onboarding UI is ready for QA"],
+  "risks": ["Activation event naming is unresolved"],
+  "nextSteps": ["CPO confirms the activation event name", "QA verifies analytics after the decision"],
+  "evidence": [{ "label": "Milestone", "value": "Public beta ready: 60%" }]
+}

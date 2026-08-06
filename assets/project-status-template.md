@@ -2,18 +2,26 @@
 
 Data timestamp: {{as_of}}
 
-## Executive status
+## Project properties
 
-## Outcomes and milestones
+- Status / health / priority
+- Lead / members
+- Start date → target date
+- Latest native Project Update
 
-## Ready by role
+## Progress
 
-## In progress
+- Issue count: Done / total
+- Estimated effort: Done / total
+
+## Native initiatives
+
+## Milestones
+
+## Ready and in progress by role
 
 ## Review queues
 
 ## Blockers and decisions
-
-## Recently completed handoffs
 
 ## Next actions

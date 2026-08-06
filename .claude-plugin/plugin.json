@@ -1,7 +1,7 @@
 {
   "name": "ldk-linear-project-ops",
-  "version": "1.0.0",
-  "description": "Role-based Linear work creation, execution, handoff, review, and reporting for Codex and Claude Code.",
+  "version": "1.1.0",
+  "description": "Role-based Linear delivery with native initiatives, milestones, planning properties, project updates, and safe legacy cleanup.",
   "author": {
     "name": "LDKTech Solutions"
   },
@@ -10,6 +10,8 @@
     "linear",
     "project-operations",
     "role-workflow",
+    "milestones",
+    "project-updates",
     "handoff",
     "review",
     "reporting"

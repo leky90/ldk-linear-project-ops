@@ -9,7 +9,7 @@ Treat one run as one employee performing one role-phase. Do not switch to anothe
 
 ## Route the issue
 
-1. Validate the project binding and read the exact issue, parent, children, blockers, role labels, resources, description, and latest human handoff.
+1. Validate the project binding and read the exact issue, Project, milestone, cycle, assignee, estimate, dates, parent, children, relations, role labels, resources, description, and latest human handoff.
 2. Determine the action from state and role:
    - `Ready`: perform the owner role's deliverable.
    - `In Review`: perform the reviewer role's review.
@@ -22,7 +22,7 @@ Treat one run as one employee performing one role-phase. Do not switch to anothe
 
 1. Acquire the packaged local file lock immediately before work. Keep lock IDs, renewal, and recovery out of Linear comments.
 2. Perform the actual role deliverable using attached resources and the relevant repository/domain workflow.
-3. For a tech lead, break an initiative into independently owned direct sub-issues only when breakdown is the requested deliverable. Do not time-slice work for agent convenience.
+3. For a tech lead, break an `outcome` issue into independently owned direct sub-issues only when breakdown is the requested deliverable. Do not time-slice work for agent convenience and never create an issue-level `initiative`.
 4. For software implementation, follow [software-work.md](../../references/software-work.md): isolate Git work internally, verify scope, and produce commit/PR/test evidence before QA handoff.
 5. Update durable resources first. Comments summarize and link; they do not become the artifact.
 6. Check Definition of Done and create a local handoff JSON matching `schemas/handoff.schema.json`.
@@ -36,3 +36,5 @@ Treat one run as one employee performing one role-phase. Do not switch to anothe
 10. Re-read the issue, release the local lock, and report the actual handoff.
 
 Never write claim, heartbeat, token, raw baseline, or validator JSON into Linear. Never mark a review passed on behalf of a different role.
+
+Milestone, cycle, estimate, due date, assignee, and role have different meanings. Do not change planning commitments unless the issue work or user explicitly authorizes it.

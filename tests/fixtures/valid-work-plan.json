@@ -1,10 +1,47 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "kind": "linear-role-work-plan",
   "mode": "preview",
-  "projectId": "project-1",
-  "teamId": "team-1",
-  "summary": "Prepare and deliver an example onboarding improvement.",
+  "summary": "Plan the example onboarding release using native Linear hierarchy.",
+  "project": {
+    "id": "project-1",
+    "teamIds": ["team-1"],
+    "name": "Example onboarding release",
+    "summary": "Improve activation.",
+    "status": "planned",
+    "priority": "high",
+    "leadId": "user-lead",
+    "memberIds": ["user-engineer", "user-qa"],
+    "startDate": "2026-08-10",
+    "targetDate": "2026-09-15",
+    "initiativeKeys": ["demo.strategy.activation"]
+  },
+  "initiatives": [
+    {
+      "key": "demo.strategy.activation",
+      "name": "Improve product activation",
+      "objective": "Increase the percentage of new users reaching activation.",
+      "status": "active",
+      "priority": "high",
+      "ownerId": "user-cpo",
+      "targetDate": "2026-12-31",
+      "labels": ["product-line:example"],
+      "resourceKeys": ["demo.resource.prd"]
+    }
+  ],
+  "milestones": [
+    {
+      "key": "demo.milestone.beta",
+      "name": "Public beta ready",
+      "description": "The reviewed onboarding flow is ready for public beta.",
+      "targetDate": "2026-09-01"
+    },
+    {
+      "key": "demo.milestone.validation",
+      "name": "Post-launch validation complete",
+      "targetDate": "2026-09-15"
+    }
+  ],
   "resources": [
     {
       "key": "demo.resource.prd",
@@ -15,24 +52,30 @@
   ],
   "issues": [
     {
-      "key": "demo.initiative.onboarding",
-      "type": "initiative",
-      "title": "Improve onboarding",
+      "key": "demo.outcome.onboarding",
+      "type": "outcome",
+      "title": "Deliver the improved onboarding flow",
       "outcome": "New users reach activation with less friction.",
-      "deliverable": "Approved implementation plan and verified release.",
+      "deliverable": "Approved implementation and verification package.",
       "status": "Ready",
       "priority": "high",
       "ownerRole": "tech-lead",
       "reviewerRole": "cpo",
+      "assigneeId": "user-lead",
+      "milestoneKey": "demo.milestone.beta",
+      "cycleId": "cycle-1",
+      "estimate": 3,
+      "dueDate": "2026-08-15",
+      "labels": ["area:product"],
       "definitionOfReady": ["PRD is linked"],
-      "definitionOfDone": ["Implementation tasks are reviewable"],
+      "definitionOfDone": ["Role-owned implementation tasks are reviewable"],
       "resourceKeys": ["demo.resource.prd"],
-      "blockedByKeys": []
+      "relations": { "blockedByKeys": [], "relatedToKeys": [] }
     },
     {
       "key": "demo.task.onboarding-ui",
       "type": "task",
-      "parentKey": "demo.initiative.onboarding",
+      "parentKey": "demo.outcome.onboarding",
       "title": "Implement onboarding UI",
       "outcome": "Users can complete the new onboarding flow.",
       "deliverable": "Reviewed code and test evidence.",
@@ -40,10 +83,16 @@
       "priority": "high",
       "ownerRole": "software-engineer",
       "reviewerRole": "qa",
+      "assigneeId": "user-engineer",
+      "milestoneKey": "demo.milestone.beta",
+      "cycleId": "cycle-1",
+      "estimate": 5,
+      "dueDate": "2026-08-25",
+      "labels": ["area:frontend"],
       "definitionOfReady": ["Acceptance examples are in the PRD"],
       "definitionOfDone": ["Tests pass", "Scoped changes are committed"],
       "resourceKeys": ["demo.resource.prd"],
-      "blockedByKeys": []
+      "relations": { "blockedByKeys": [], "relatedToKeys": ["demo.outcome.onboarding"] }
     }
   ]
 }

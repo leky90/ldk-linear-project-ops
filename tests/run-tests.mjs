@@ -12,10 +12,13 @@ import {
   DEFAULT_ROLES,
   normalizeProjectBinding,
   readJson,
+  renderProjectUpdate,
   renderWorkComment,
   stableKey,
   validateHandoff,
+  validateLegacyCleanupPlan,
   validateProjectBinding,
+  validateProjectUpdate,
   validateWorkPlan,
 } from "../scripts/lib.mjs";
 
@@ -45,17 +48,64 @@ test("v2 binding validates and v1 binding is read-compatible", async () => {
   assert.equal(Object.hasOwn(normalized, "coordination"), false);
 });
 
-test("work plan enforces apply intent, roles, references, and dependency DAG", async () => {
+test("v2 work plan enforces hierarchy, planning fields, references, and dependency DAG", async () => {
   const plan = await readJson(fixture("valid-work-plan.json"));
   assert.deepEqual(validateWorkPlan(plan, { projectId: "project-1", teamId: "team-1" }), []);
   assert.match(validateWorkPlan(plan, { forApply: true }).join("\n"), /mode must be apply/u);
   plan.mode = "apply";
   assert.deepEqual(validateWorkPlan(plan, { projectId: "project-1", teamId: "team-1", forApply: true }), []);
-  plan.issues[1].blockedByKeys = ["demo.initiative.onboarding"];
-  plan.issues[0].blockedByKeys = ["demo.task.onboarding-ui"];
+  plan.issues[1].relations.blockedByKeys = ["demo.outcome.onboarding"];
+  plan.issues[0].relations.blockedByKeys = ["demo.task.onboarding-ui"];
   assert.match(validateWorkPlan(plan).join("\n"), /dependency cycle/u);
+  plan.issues[0].relations.blockedByKeys = [];
+  plan.issues[1].relations.blockedByKeys = [];
   plan.issues[1].ownerRole = "unknown-specialist";
   assert.match(validateWorkPlan(plan).join("\n"), /unknown role/u);
+  plan.issues[1].ownerRole = "software-engineer";
+  plan.issues[0].type = "initiative";
+  assert.match(validateWorkPlan(plan).join("\n"), /use outcome instead of an issue-level initiative/u);
+  plan.issues[0].type = "outcome";
+  plan.issues[1].parentKey = "demo.task.onboarding-ui";
+  assert.match(validateWorkPlan(plan).join("\n"), /parentKey must reference an outcome/u);
+  plan.issues[1].parentKey = "demo.outcome.onboarding";
+  plan.issues[1].milestoneKey = "demo.milestone.missing";
+  assert.match(validateWorkPlan(plan).join("\n"), /references unknown milestone/u);
+  plan.issues[1].milestoneKey = "demo.milestone.beta";
+  plan.issues[1].dueDate = "2026-02-31";
+  assert.match(validateWorkPlan(plan).join("\n"), /must be a valid ISO date/u);
+});
+
+test("v1 work plan remains read-compatible during the transition", async () => {
+  const plan = await readJson(fixture("legacy-work-plan-v1.json"));
+  assert.deepEqual(validateWorkPlan(plan, { projectId: "project-1", teamId: "team-1" }), []);
+});
+
+test("native project updates require publish intent and render a management update", async () => {
+  const update = await readJson(fixture("valid-project-update.json"));
+  assert.deepEqual(validateProjectUpdate(update, { projectId: "project-1" }), []);
+  assert.match(validateProjectUpdate(update, { projectId: "project-1", forPublish: true }).join("\n"), /mode must be publish/u);
+  update.mode = "publish";
+  assert.deepEqual(validateProjectUpdate(update, { projectId: "project-1", forPublish: true }), []);
+  const rendered = renderProjectUpdate(update);
+  assert.match(rendered, /Project Update · At risk/u);
+  assert.match(rendered, /Activation event naming is unresolved/u);
+  update.health = "unknown";
+  assert.match(validateProjectUpdate(update).join("\n"), /health is invalid/u);
+});
+
+test("legacy cleanup requires exact approved destructive entries", async () => {
+  const plan = await readJson(fixture("valid-legacy-cleanup.json"));
+  assert.deepEqual(validateLegacyCleanupPlan(plan, { projectId: "project-1" }), []);
+  assert.match(validateLegacyCleanupPlan(plan, { projectId: "project-1", forApply: true }).join("\n"), /mode must be apply/u);
+  plan.mode = "apply";
+  assert.match(validateLegacyCleanupPlan(plan, { projectId: "project-1", forApply: true }).join("\n"), /must be explicitly approved/u);
+  plan.entries.forEach((entry) => { entry.approved = true; });
+  assert.deepEqual(validateLegacyCleanupPlan(plan, { projectId: "project-1", forApply: true }), []);
+  plan.entries[0].canonicalIssueId = "";
+  assert.match(validateLegacyCleanupPlan(plan).join("\n"), /canonicalIssueId is required/u);
+  plan.entries[0].canonicalIssueId = "EXAMPLE-2";
+  plan.snapshotAt = "2026-08-06";
+  assert.match(validateLegacyCleanupPlan(plan).join("\n"), /ISO timestamp with timezone/u);
 });
 
 test("handoff validates DoD and renders one human-oriented comment", async () => {
@@ -144,9 +194,13 @@ test("software handoff rejects committed paths outside declared scope", async ()
 test("project report presents role queues without claim telemetry", async () => {
   const report = buildProjectReport(await readJson(fixture("project-snapshot.json")));
   assert.match(report, /1\/6 issue Done \(17%\)/u);
+  assert.match(report, /1\/15 estimated effort Done \(7%\)/u);
+  assert.match(report, /status started; health at-risk; priority high; lead Product Lead/u);
+  assert.match(report, /Improve product activation.*active; high; owner CPO/u);
+  assert.match(report, /Onboarding release.*1\/5 Done; effort 1\/14; có rủi ro/u);
   assert.match(report, /software-engineer:\*\* 1 Ready/u);
   assert.match(report, /content-director:\*\* 0 Ready, 0 In Progress, 1 chờ review/u);
-  assert.match(report, /Implement onboarding UI.*— high; ownerRole software-engineer/u);
+  assert.match(report, /Implement onboarding UI.*milestone Onboarding release; Cycle 32; due 2026-08-15; estimate 5; assignee Engineer A/u);
   assert.doesNotMatch(report, /\bclaim\b|\blease\b|\bheartbeat\b|\brun ID\b/iu);
 });
 
@@ -159,6 +213,16 @@ test("hook routes a direct issue request to the single execution skill", async (
   assert.match(output, /\$linear-do-issue/u);
   assert.doesNotMatch(output, /linear-execute-goal-chain|linear-claim-focus/u);
   assert.equal(await readFile(join(root, ".linear-project-ops.json"), "utf8"), binding);
+});
+
+test("hook routes native planning, project updates, and legacy cleanup", async () => {
+  const root = await mkdtemp(join(tmpdir(), "ldk-linear-plugin-"));
+  await writeFile(join(root, ".linear-project-ops.json"), JSON.stringify({ project: { linearProjectId: "project-hook", linearTeamId: "team-hook" } }));
+  const hook = join(here, "..", "scripts", "hook-entry.mjs");
+  const run = (prompt) => runProcess(process.execPath, [hook, "UserPromptSubmit"], JSON.stringify({ cwd: root, prompt }));
+  assert.match(await run("Hãy tạo milestone cho public beta"), /\$linear-create-work.*native Initiative/u);
+  assert.match(await run("Hãy publish Project Update và cập nhật health"), /\$linear-project-status.*native Linear Project Update/u);
+  assert.match(await run("Hãy audit và purge legacy comments"), /\$linear-reconcile.*exact validated preview/u);
 });
 
 function runProcess(command, args, input) {
