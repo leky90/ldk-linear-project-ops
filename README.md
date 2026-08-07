@@ -117,6 +117,21 @@ Merge/deploy chỉ xảy ra khi issue/DoD và quyền được giao yêu cầu r
 
 ## Cài cho Claude Code
 
+Từ GitHub Marketplace riêng của plugin:
+
+```sh
+claude plugin marketplace add https://github.com/leky90/ldk-linear-project-ops
+claude plugin install ldk-linear-project-ops@ldk-linear-project-ops-local --scope user
+```
+
+Repository là public, nên các máy khác có thể thêm marketplace mà không cần
+quyền GitHub của `leky90`. Tên marketplace giữ là
+`ldk-linear-project-ops-local` để tương thích với manifest hiện tại; đây không
+phải chỉ báo rằng plugin chỉ cài được local.
+
+Khi phát triển plugin từ checkout cục bộ, có thể dùng đường dẫn local thay cho
+URL GitHub:
+
 ```sh
 claude plugin marketplace add /absolute/path/to/ldk-linear-project-ops
 claude plugin install ldk-linear-project-ops@ldk-linear-project-ops-local --scope user
