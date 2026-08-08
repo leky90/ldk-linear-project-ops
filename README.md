@@ -115,6 +115,12 @@ thay đổi trong scope phải được commit, worktree sạch và evidence tr�
 review commit/PR/test evidence bất biến, không tiếp quản worktree của engineer.
 Merge/deploy chỉ xảy ra khi issue/DoD và quyền được giao yêu cầu rõ ràng.
 
+Khi issue chuyển sang trạng thái kết thúc, agent phải đưa primary checkout về
+`main`, fast-forward an toàn, rồi dọn worktree/branch local đã merge hoặc có patch
+tương đương. Không dùng hook tự động cho bước này vì hook không đủ ngữ cảnh sở hữu
+workspace; mọi thay đổi bẩn, chưa push hoặc chưa merge phải được giữ nguyên và báo
+rõ.
+
 ## Cài cho Claude Code
 
 Từ GitHub Marketplace riêng của plugin:

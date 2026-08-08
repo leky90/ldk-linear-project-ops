@@ -14,7 +14,11 @@ Treat one run as one employee performing one role-phase. Do not switch to anothe
    - `Ready`: perform the owner role's deliverable.
    - `In Review`: perform the reviewer role's review.
    - `Blocked` or `Refinement`: explain the missing input; do not execute.
-   - `Done` or `Canceled`: report and stop.
+   - `Done` or `Canceled`: do not repeat the role deliverable. If the current
+     workspace still contains branch/worktree state from this completed work,
+     perform terminal Git closure using
+     [git-closure.md](../../references/git-closure.md), then report; otherwise
+     report and stop.
 3. Prefer the explicit `role:*` label. For legacy issues only, infer a role conservatively using [legacy-compatibility.md](../../references/legacy-compatibility.md).
 4. Check the issue's Definition of Ready. If it fails, post one structured blocked comment and set the appropriate non-executing state.
 
@@ -33,7 +37,15 @@ Treat one run as one employee performing one role-phase. Do not switch to anothe
    - review passed → `Done`;
    - changes requested → `Ready` plus previous owner role;
    - blocked → `Blocked` or `Refinement`.
-10. Re-read the issue, release the local lock, and report the actual handoff.
+10. Re-read the issue and release the local lock.
+11. When this run makes the issue `Done` or `Canceled`, or encounters an already
+    terminal issue whose Git state is still present, perform terminal Git
+    closure using [git-closure.md](../../references/git-closure.md). Preserve
+    any dirty, unpushed, uniquely unmerged, or unrelated work and report why it
+    could not be cleaned.
+12. Recheck branch, status, and `git worktree list --porcelain`, then report the
+    actual handoff and cleanup result. Do not call an issue fully closed while
+    silently leaving a disposable task worktree or merged task branch active.
 
 Never write claim, heartbeat, token, raw baseline, or validator JSON into Linear. Never mark a review passed on behalf of a different role.
 
