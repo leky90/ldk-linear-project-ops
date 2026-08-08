@@ -8,13 +8,13 @@ import { validateProjectBinding } from "../scripts/lib.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 
-test("package exposes the same v1.1 plugin for Codex and Claude Code", async () => {
+test("package exposes the same v1.1.1 plugin for Codex and Claude Code", async () => {
   const codex = JSON.parse(await readFile(join(root, ".codex-plugin", "plugin.json"), "utf8"));
   const claude = JSON.parse(await readFile(join(root, ".claude-plugin", "plugin.json"), "utf8"));
   const marketplace = JSON.parse(await readFile(join(root, ".claude-plugin", "marketplace.json"), "utf8"));
   const packageJson = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
   assert.equal(packageJson.name, "ldk-linear-project-ops");
-  assert.equal(packageJson.version, "1.1.0");
+  assert.equal(packageJson.version, "1.1.1");
   assert.equal(codex.name, packageJson.name);
   assert.equal(codex.version.split("+")[0], packageJson.version);
   assert.equal(claude.name, packageJson.name);
@@ -33,6 +33,26 @@ test("plugin has four role-oriented public skills", async () => {
     await access(join(root, "skills", skill, "SKILL.md"));
     await access(join(root, "skills", skill, "agents", "openai.yaml"));
   }
+});
+
+test("terminal issue runs require safe Git and worktree closure", async () => {
+  const skill = await readFile(join(root, "skills", "linear-do-issue", "SKILL.md"), "utf8");
+  const software = await readFile(join(root, "references", "software-work.md"), "utf8");
+  const closure = await readFile(join(root, "references", "git-closure.md"), "utf8");
+
+  assert.match(skill, /git-closure\.md/u);
+  assert.match(skill, /terminal Git closure/u);
+  assert.match(software, /Terminal Git closure/u);
+  for (const command of [
+    "git status --short --branch",
+    "git worktree list --porcelain",
+    "git fetch --prune origin",
+    "git merge --ff-only origin/main",
+    "git cherry origin/main",
+    "git worktree prune",
+  ]) assert.match(closure, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
+  assert.match(closure, /Never delete a remote branch/u);
+  assert.match(closure, /uncommitted, unpushed, or uniquely unmerged/u);
 });
 
 test("old SQLite claim engine and automation-era schemas are removed", async () => {
@@ -63,6 +83,7 @@ test("old SQLite claim engine and automation-era schemas are removed", async () 
     "references/linear-hierarchy.md",
     "references/planning-properties.md",
     "references/legacy-cleanup.md",
+    "references/git-closure.md",
     "assets/initiative-template.md",
     "assets/milestone-template.md",
     "assets/outcome-issue-template.md",
