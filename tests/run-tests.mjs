@@ -8,6 +8,7 @@ import test from "node:test";
 
 import { buildProjectReport } from "../scripts/build-project-report.mjs";
 import { captureGitBaseline, validateLiveGitDelivery } from "../scripts/git-delivery-state.mjs";
+import { analyzeProjectLifecycle, normalizeProjectStatusCategory, resolveProjectStatus } from "../scripts/project-lifecycle.mjs";
 import {
   DEFAULT_ROLES,
   normalizeProjectBinding,
@@ -54,6 +55,12 @@ test("v2 work plan enforces hierarchy, planning fields, references, and dependen
   assert.match(validateWorkPlan(plan, { forApply: true }).join("\n"), /mode must be apply/u);
   plan.mode = "apply";
   assert.deepEqual(validateWorkPlan(plan, { projectId: "project-1", teamId: "team-1", forApply: true }), []);
+  plan.project.projectStatus.category = "paused";
+  assert.match(validateWorkPlan(plan).join("\n"), /project\.projectStatus\.category is invalid/u);
+  plan.project.projectStatus.category = "in-progress";
+  plan.project.status = "started";
+  assert.match(validateWorkPlan(plan).join("\n"), /cannot both be set/u);
+  delete plan.project.status;
   plan.issues[1].relations.blockedByKeys = ["demo.outcome.onboarding"];
   plan.issues[0].relations.blockedByKeys = ["demo.task.onboarding-ui"];
   assert.match(validateWorkPlan(plan).join("\n"), /dependency cycle/u);
@@ -195,13 +202,84 @@ test("project report presents role queues without claim telemetry", async () => 
   const report = buildProjectReport(await readJson(fixture("project-snapshot.json")));
   assert.match(report, /1\/6 issue Done \(17%\)/u);
   assert.match(report, /1\/15 estimated effort Done \(7%\)/u);
-  assert.match(report, /status started; health at-risk; priority high; lead Product Lead/u);
+  assert.match(report, /status In Progress \(in-progress\); health at-risk; priority high; lead Product Lead/u);
+  assert.match(report, /Nhất quán Project lifecycle/u);
+  assert.match(report, /Kết luận: \*\*Nhất quán\*\*/u);
   assert.match(report, /Improve product activation.*active; high; owner CPO/u);
   assert.match(report, /Onboarding release.*1\/5 Done; effort 1\/14; có rủi ro/u);
   assert.match(report, /software-engineer:\*\* 1 Ready/u);
   assert.match(report, /content-director:\*\* 0 Ready, 0 In Progress, 1 chờ review/u);
   assert.match(report, /Implement onboarding UI.*milestone Onboarding release; Cycle 32; due 2026-08-15; estimate 5; assignee Engineer A/u);
   assert.doesNotMatch(report, /\bclaim\b|\blease\b|\bheartbeat\b|\brun ID\b/iu);
+});
+
+test("project lifecycle flags Planned after delivery and recommends In Progress", async () => {
+  const snapshot = await readJson(fixture("project-snapshot.json"));
+  snapshot.project.projectStatus = { id: "status-planned", name: "Planned", category: "planned" };
+  snapshot.issues.forEach((issue) => { issue.status = "Done"; });
+  snapshot.milestones.forEach((milestone) => { milestone.completionPercentage = 100; });
+  const lifecycle = analyzeProjectLifecycle(snapshot);
+  assert.equal(lifecycle.code, "status-mismatch");
+  assert.equal(lifecycle.consistency, "mismatch");
+  assert.equal(lifecycle.recommendedCategory, "in-progress");
+  assert.equal(lifecycle.safeTransition, true);
+  const report = buildProjectReport(snapshot);
+  assert.match(report, /Planned → In Progress/u);
+  assert.match(report, /Project lead\/CPO: xác nhận hoặc áp dụng chuyển Project sang In Progress/u);
+  assert.doesNotMatch(report, /đề xuất chuyển.*Completed/iu);
+});
+
+test("continuous lifecycle stays In Progress when its queue is temporarily empty", async () => {
+  const snapshot = await readJson(fixture("project-snapshot.json"));
+  snapshot.issues.forEach((issue) => { issue.status = "Done"; });
+  const lifecycle = analyzeProjectLifecycle(snapshot);
+  assert.equal(lifecycle.code, "continuous-needs-outcome");
+  assert.equal(lifecycle.recommendedCategory, "in-progress");
+  const report = buildProjectReport(snapshot);
+  assert.match(report, /Không chuyển Completed chỉ vì hàng đợi trống/u);
+  assert.match(report, /giữ Project ở In Progress/u);
+});
+
+test("completed projects with open work require an explicit reopen decision", async () => {
+  const snapshot = await readJson(fixture("project-snapshot.json"));
+  snapshot.project.projectStatus = { id: "status-completed", name: "Completed", category: "completed" };
+  const lifecycle = analyzeProjectLifecycle(snapshot);
+  assert.equal(lifecycle.code, "completed-with-open-work");
+  assert.equal(lifecycle.requiresDecision, true);
+  assert.equal(lifecycle.safeTransition, undefined);
+  const report = buildProjectReport(snapshot);
+  assert.match(report, /không tự reopen\/complete\/cancel/u);
+  assert.doesNotMatch(report, /xác nhận hoặc áp dụng chuyển Project/u);
+});
+
+test("Planned remains valid before execution evidence exists", async () => {
+  const snapshot = await readJson(fixture("project-snapshot.json"));
+  snapshot.project.projectStatus = { id: "status-planned", name: "Planned", category: "planned" };
+  snapshot.issues.forEach((issue) => { issue.status = "Ready"; });
+  const lifecycle = analyzeProjectLifecycle(snapshot);
+  assert.equal(lifecycle.code, "consistent");
+  assert.equal(lifecycle.recommendedCategory, undefined);
+});
+
+test("project status categories normalize live Linear and legacy names", () => {
+  assert.equal(normalizeProjectStatusCategory("In Progress"), "in-progress");
+  assert.equal(normalizeProjectStatusCategory("started"), "in-progress");
+  assert.equal(normalizeProjectStatusCategory({ category: "completed" }), "completed");
+  assert.equal(normalizeProjectStatusCategory("Paused"), null);
+  assert.deepEqual(resolveProjectStatus({ projectStatus: { id: "status-live", name: "Active Delivery", category: "in-progress" } }), {
+    id: "status-live",
+    name: "Active Delivery",
+    category: "in-progress",
+  });
+});
+
+test("custom paused status is never auto-resumed", async () => {
+  const snapshot = await readJson(fixture("project-snapshot.json"));
+  snapshot.project.projectStatus = { id: "status-paused", name: "On Hold", category: "planned" };
+  const lifecycle = analyzeProjectLifecycle(snapshot);
+  assert.equal(lifecycle.code, "paused-project");
+  assert.equal(lifecycle.requiresDecision, true);
+  assert.equal(lifecycle.safeTransition, undefined);
 });
 
 test("hook routes a direct issue request to the single execution skill", async () => {
@@ -222,6 +300,7 @@ test("hook routes native planning, project updates, and legacy cleanup", async (
   const run = (prompt) => runProcess(process.execPath, [hook, "UserPromptSubmit"], JSON.stringify({ cwd: root, prompt }));
   assert.match(await run("Hãy tạo milestone cho public beta"), /\$linear-create-work.*native Initiative/u);
   assert.match(await run("Hãy publish Project Update và cập nhật health"), /\$linear-project-status.*native Linear Project Update/u);
+  assert.match(await run("Hãy sửa Project status về đúng trạng thái"), /\$linear-project-status.*lifecycle consistency.*In Progress/u);
   assert.match(await run("Hãy audit và purge legacy comments"), /\$linear-reconcile.*exact validated preview/u);
 });
 

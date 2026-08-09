@@ -8,7 +8,17 @@
     "teamIds": ["team-1"],
     "name": "Example onboarding release",
     "summary": "Improve activation.",
-    "status": "planned",
+    "projectStatus": {
+      "id": "project-status-in-progress",
+      "name": "In Progress",
+      "category": "in-progress"
+    },
+    "lifecycle": {
+      "mode": "continuous",
+      "completionCriteria": [
+        "CPO confirms that product operations, acquisition, conversion, and support have reached the declared end-state"
+      ]
+    },
     "priority": "high",
     "leadId": "user-lead",
     "memberIds": ["user-engineer", "user-qa"],

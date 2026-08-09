@@ -4,7 +4,14 @@
     "id": "project-1",
     "name": "Example Product",
     "url": "https://linear.app/example/project/demo",
-    "status": "started",
+    "projectStatus": {
+      "id": "project-status-in-progress",
+      "name": "In Progress",
+      "category": "in-progress"
+    },
+    "lifecycle": {
+      "mode": "continuous"
+    },
     "priority": "high",
     "lead": "Product Lead",
     "startDate": "2026-08-01",

@@ -69,7 +69,7 @@ Plugin tự đọc live state và thực hiện đúng một role phase:
 Schema canonical là `schemas/work-plan.schema.json` v2. Nó hỗ trợ:
 
 - native Initiative, Project và Milestone;
-- project status/priority/lead/members/start/target;
+- live project status ID/name/category, lifecycle mode, completion criteria, priority/lead/members/start/target;
 - outcome, task, decision và parent-child;
 - assignee, estimate, cycle, due date, milestone;
 - blocked-by, related-to và duplicate-of;
@@ -81,7 +81,15 @@ map issue-level `initiative` cũ thành `outcome`.
 ## Project status và legacy cleanup
 
 Status report phân biệt issue-count progress với estimated-effort progress, trình
-bày Initiative, Milestone, role queue, blocker, decision và latest Project Update.
+bày Initiative, Milestone, role queue, blocker, decision, latest Project Update và
+Project lifecycle consistency. Backlog/Planned có execution evidence được đề xuất
+chuyển sang live status thuộc category In Progress. Continuous Project tạm hết
+outcome vẫn giữ In Progress và yêu cầu CPO chọn outcome tiếp theo; plugin không tự
+Completed chỉ vì issue hoặc milestone đạt 100%.
+
+Khi `linear-do-issue` bắt đầu execution trên Project Backlog/Planned, yêu cầu thực
+hiện issue cho phép plugin áp dụng transition an toàn sang exact live In Progress
+status ID. Completed/Canceled phải có quyền reopen rõ ràng trước khi làm thêm việc.
 Chỉ prompt publish/update rõ ràng mới ghi native Project Update với health `on-track`,
 `at-risk` hoặc `off-track`.
 

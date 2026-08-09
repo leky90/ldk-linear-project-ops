@@ -9,6 +9,13 @@ Data timestamp: {{as_of}}
 - Start date → target date
 - Latest native Project Update
 
+## Project lifecycle consistency
+
+- Current live status ID / name / category
+- Execution evidence
+- Mismatch or advisory
+- Recommended transition and required authority
+
 ## Progress
 
 - Issue count: Done / total

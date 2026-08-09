@@ -206,7 +206,27 @@ export function validateWorkPlan(plan, { projectId, teamId, forApply = false, ro
     validateStringArray(project.teamIds, "project.teamIds", errors, { nonEmpty: true });
     if (projectId && project.id !== projectId) errors.push(`project.id ${project.id} does not match bound project ${projectId}`);
     if (teamId && Array.isArray(project.teamIds) && !project.teamIds.includes(teamId)) errors.push(`project.teamIds must include bound team ${teamId}`);
-    if (project.status !== undefined && !new Set(["planned", "started", "paused", "completed", "canceled"]).has(project.status)) errors.push("project.status is invalid");
+    if (project.status !== undefined && !new Set(["backlog", "planned", "started", "in-progress", "paused", "completed", "canceled"]).has(project.status)) errors.push("project.status is invalid");
+    if (project.status !== undefined && project.projectStatus !== undefined) errors.push("project.status and project.projectStatus cannot both be set");
+    if (project.projectStatus !== undefined) {
+      const status = project.projectStatus;
+      if (!status || typeof status !== "object" || Array.isArray(status)) {
+        errors.push("project.projectStatus must be an object");
+      } else {
+        requiredString(status.id, "project.projectStatus.id", errors);
+        requiredString(status.name, "project.projectStatus.name", errors);
+        if (!new Set(["backlog", "planned", "in-progress", "completed", "canceled"]).has(status.category)) errors.push("project.projectStatus.category is invalid");
+      }
+    }
+    if (project.lifecycle !== undefined) {
+      const lifecycle = project.lifecycle;
+      if (!lifecycle || typeof lifecycle !== "object" || Array.isArray(lifecycle)) {
+        errors.push("project.lifecycle must be an object");
+      } else {
+        if (!new Set(["bounded", "continuous"]).has(lifecycle.mode)) errors.push("project.lifecycle.mode is invalid");
+        validateStringArray(lifecycle.completionCriteria, "project.lifecycle.completionCriteria", errors);
+      }
+    }
     if (project.priority !== undefined && !new Set(["urgent", "high", "normal", "low", "none"]).has(project.priority)) errors.push("project.priority is invalid");
     validateOptionalDate(project.startDate, "project.startDate", errors);
     validateOptionalDate(project.targetDate, "project.targetDate", errors);

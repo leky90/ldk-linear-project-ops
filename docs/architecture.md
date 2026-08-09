@@ -22,6 +22,11 @@ Initiative → Project → Milestone → Outcome issue → Task / Decision
 Cycle, estimate, assignee và due date là thuộc tính lập kế hoạch bổ sung; chúng
 không thay thế hierarchy hoặc `ownerRole`/`reviewerRole`.
 
+Project status dùng live Linear status ID/name/category. `started` chỉ là legacy
+read alias cho category `in-progress`; custom status names không được hard-code.
+Project có thể khai báo lifecycle `bounded` hoặc `continuous`, nhưng cả hai vẫn cần
+completion criteria ở cấp Project.
+
 ## Role-state contract
 
 | State | Người thực hiện | Kết quả hợp lệ |
@@ -39,11 +44,12 @@ không thay thế hierarchy hoặc `ownerRole`/`reviewerRole`.
 
 1. Load immutable binding; đọc live hierarchy, issue, resources và relations.
 2. Resolve role từ state và role label; legacy chỉ được suy luận thận trọng.
-3. Kiểm tra DoR và acquire local file lock.
-4. Thực hiện đúng một role phase.
+3. Kiểm tra DoR và Project lifecycle. Nếu Project Backlog/Planned và role-phase sẽ
+   chạy, chuyển sang exact live status ID thuộc In Progress rồi re-read.
+4. Acquire local file lock và thực hiện đúng một role phase.
 5. Validate handoff/review evidence.
 6. Update durable resources, một human comment, role label và state.
-7. Re-read Linear rồi release lock.
+7. Re-read issue và Project lifecycle rồi release lock.
 
 Lock không thay thế Linear state. Agent ở nhiều máy dựa trên atomic update/re-read;
 shared distributed lock nếu cần là hạ tầng riêng ngoài plugin.
@@ -56,8 +62,10 @@ re-read giữ retry idempotent. Host không có native mutation nào thì plugin
 capability gap; không mô phỏng object đó bằng issue/comment sai tầng.
 
 `linear-project-status` mặc định read-only. Nó tách issue-count progress và effort
-progress, nhóm theo Initiative/Milestone/role, rồi chỉ publish native Project Update
-khi người dùng yêu cầu trực tiếp và health có evidence.
+progress, nhóm theo Initiative/Milestone/role và luôn kiểm tra lifecycle consistency.
+Planned có execution evidence được đề xuất In Progress; continuous Project không có
+open outcome vẫn giữ In Progress. Skill chỉ sửa status hoặc publish native Project
+Update khi người dùng yêu cầu trực tiếp.
 
 ## Legacy cleanup path
 
@@ -83,6 +91,9 @@ token, heartbeat, database path, worktree path và raw JSON bị cấm trên Lin
 
 - Project/team identity chỉ đến từ consumer binding.
 - Preview/draft là read-only; apply/publish/perform mới cho phép ghi đúng scope.
+- Perform issue cho phép transition Backlog/Planned → In Progress; không cho phép
+  Complete/Cancel/reopen Project nếu thiếu quyền rõ ràng.
+- Empty queue hoặc 100% current work không phải Project completion evidence.
 - Stable keys và post-mutation re-read bắt buộc cho idempotency.
 - Delete yêu cầu exact ID, canonical preservation và phê duyệt riêng.
 - Destructive, bulk, cross-project và production actions cần quyền rõ ràng.

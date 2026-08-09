@@ -1,6 +1,6 @@
 ---
 name: linear-do-issue
-description: Perform one Linear issue as its currently responsible role and hand it to the next role. Use for requests such as "Hãy thực hiện issue LDK-123", including product analysis, technical breakdown, software implementation, QA review, content creation, marketing, sales, and other role-owned work.
+description: Perform one Linear issue as its currently responsible role, align a not-yet-started Project to In Progress, and hand work to the next role. Use for requests such as "Hãy thực hiện issue LDK-123", including product analysis, technical breakdown, software implementation, QA review, content creation, marketing, sales, and other role-owned work.
 ---
 
 # Do One Linear Issue
@@ -9,7 +9,7 @@ Treat one run as one employee performing one role-phase. Do not switch to anothe
 
 ## Route the issue
 
-1. Validate the project binding and read the exact issue, Project, milestone, cycle, assignee, estimate, dates, parent, children, relations, role labels, resources, description, and latest human handoff.
+1. Validate the project binding and read the exact issue, Project, live Project status ID/category, available Project statuses, milestone, cycle, assignee, estimate, dates, parent, children, relations, role labels, resources, description, and latest human handoff.
 2. Determine the action from state and role:
    - `Ready`: perform the owner role's deliverable.
    - `In Review`: perform the reviewer role's review.
@@ -21,6 +21,10 @@ Treat one run as one employee performing one role-phase. Do not switch to anothe
      report and stop.
 3. Prefer the explicit `role:*` label. For legacy issues only, infer a role conservatively using [legacy-compatibility.md](../../references/legacy-compatibility.md).
 4. Check the issue's Definition of Ready. If it fails, post one structured blocked comment and set the appropriate non-executing state.
+5. Apply [project-lifecycle.md](../../references/project-lifecycle.md):
+   - if this run will execute or review work and the Project is Backlog/Planned, update it to the live status ID in category `in-progress`, then re-read it;
+   - if the Project is Completed/Canceled, stop unless the user explicitly authorizes reopening;
+   - never complete the Project merely because this issue or the current queue becomes Done.
 
 ## Perform and hand off
 
@@ -37,7 +41,7 @@ Treat one run as one employee performing one role-phase. Do not switch to anothe
    - review passed → `Done`;
    - changes requested → `Ready` plus previous owner role;
    - blocked → `Blocked` or `Refinement`.
-10. Re-read the issue and release the local lock.
+10. Re-read the issue and Project; verify their lifecycle states are consistent, then release the local lock.
 11. When this run makes the issue `Done` or `Canceled`, or encounters an already
     terminal issue whose Git state is still present, perform terminal Git
     closure using [git-closure.md](../../references/git-closure.md). Preserve
@@ -49,4 +53,4 @@ Treat one run as one employee performing one role-phase. Do not switch to anothe
 
 Never write claim, heartbeat, token, raw baseline, or validator JSON into Linear. Never mark a review passed on behalf of a different role.
 
-Milestone, cycle, estimate, due date, assignee, and role have different meanings. Do not change planning commitments unless the issue work or user explicitly authorizes it.
+Milestone, cycle, estimate, due date, assignee, and role have different meanings. Do not change planning commitments unless the issue work or user explicitly authorizes it. The safe Backlog/Planned → In Progress transition required to begin execution is a lifecycle invariant, not a new planning commitment.

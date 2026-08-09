@@ -1,4 +1,4 @@
 interface:
   display_name: "Linear Project Status"
-  short_description: "Report progress or publish a native project update"
-  default_prompt: "Use $linear-project-status to report project progress or publish an evidence-based native Linear Project Update."
+  short_description: "Audit progress and Project lifecycle status"
+  default_prompt: "Use $linear-project-status to report progress, detect Project lifecycle mismatches, and propose the correct live Linear status."

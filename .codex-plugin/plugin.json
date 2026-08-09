@@ -1,7 +1,7 @@
 {
   "name": "ldk-linear-project-ops",
-  "version": "1.1.1+codex.20260809003232",
-  "description": "Role-based Linear delivery with native initiatives, milestones, planning properties, project updates, and safe legacy cleanup.",
+  "version": "1.1.2+codex.20260809085847",
+  "description": "Role-based Linear delivery with lifecycle-aware Project status, native planning, project updates, and safe cleanup.",
   "author": {
     "name": "LDKTech Solutions"
   },
@@ -9,12 +9,13 @@
   "interface": {
     "displayName": "Linear RoleFlow",
     "shortDescription": "Plan and deliver work through role-based Linear handoffs.",
-    "longDescription": "A human-oriented workflow that maps strategy to native Linear initiatives, projects, milestones and issues; performs one issue according to its responsible role; hands work to the next role; publishes evidence-based project updates; and safely cleans legacy artifacts.",
+    "longDescription": "A human-oriented workflow that maps strategy to native Linear hierarchy, keeps Project lifecycle status aligned with execution evidence, performs issues by responsible role, publishes evidence-based project updates, and safely cleans legacy artifacts.",
     "developerName": "LDKTech Solutions",
     "category": "Productivity",
     "capabilities": [
       "Role-based issue creation",
       "Native initiative and milestone planning",
+      "Project lifecycle consistency and safe status transitions",
       "Assignee, estimate, cycle and due-date planning",
       "Issue execution and handoff",
       "Definition of Ready and Done",
@@ -26,7 +27,7 @@
     "defaultPrompt": [
       "Create native Linear initiatives, milestones, resources, and role-owned issues from this product brief.",
       "Perform issue LDK-123 according to its current role and state.",
-      "Publish a project update with health, progress, risks, evidence, and next steps."
+      "Report Project lifecycle consistency and propose the correct live Linear status."
     ]
   }
 }

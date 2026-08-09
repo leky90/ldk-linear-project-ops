@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import { pathToFileURL } from "node:url";
 import { readJson } from "./lib.mjs";
+import { analyzeProjectLifecycle, resolveProjectStatus } from "./project-lifecycle.mjs";
 
 const PRIORITY = new Map([["urgent", 0], ["high", 1], ["normal", 2], ["low", 3], ["none", 4]]);
+const CONSISTENCY_LABEL = Object.freeze({ consistent: "Nhất quán", mismatch: "Bất nhất", advisory: "Cần chú ý", unknown: "Không xác định" });
 
 export function buildProjectReport(snapshot) {
   if (!snapshot?.project?.id || !snapshot?.project?.name) throw new Error("snapshot.project.id and name are required");
@@ -26,6 +28,8 @@ export function buildProjectReport(snapshot) {
   const roles = [...new Set(issues.flatMap((issue) => [issue.ownerRole, issue.reviewerRole]).filter(Boolean))].sort();
   const milestones = Array.isArray(snapshot.milestones) ? snapshot.milestones : [];
   const milestoneByKey = new Map(milestones.map((milestone) => [milestone.key, milestone]));
+  const lifecycle = analyzeProjectLifecycle(snapshot);
+  const projectStatus = resolveProjectStatus(snapshot.project);
 
   const queue = (items, roleField) => items
     .slice()
@@ -63,18 +67,31 @@ export function buildProjectReport(snapshot) {
   const initiativeLines = initiatives.map((initiative) => `- ${link(initiative.name, initiative.url)} — ${initiative.status ?? "unknown"}; ${initiative.priority ?? "none"}; owner ${initiative.owner ?? "chưa gán"}${initiative.targetDate ? `; target ${initiative.targetDate}` : ""}.`);
   const latestUpdate = snapshot.project.latestUpdate;
   const projectProperties = [
-    `status ${snapshot.project.status ?? "unknown"}`,
+    `status ${projectStatus.name} (${projectStatus.category ?? "unknown category"})`,
     `health ${latestUpdate?.health ?? snapshot.project.health ?? "chưa cập nhật"}`,
     `priority ${snapshot.project.priority ?? "none"}`,
     `lead ${snapshot.project.lead ?? "chưa gán"}`,
     `window ${snapshot.project.startDate ?? "?"} → ${snapshot.project.targetDate ?? "?"}`,
   ].join("; ");
+  const lifecycleLines = [
+    `- Kết luận: **${CONSISTENCY_LABEL[lifecycle.consistency] ?? lifecycle.consistency}** — ${lifecycle.message}`,
+    `- Evidence: ${lifecycle.evidence.length ? lifecycle.evidence.join("; ") : "chưa có execution evidence"}.`,
+    ...(lifecycle.recommendedCategory && lifecycle.recommendedCategory !== projectStatus.category
+      ? [lifecycle.safeTransition
+        ? `- Đề xuất chuyển: **${projectStatus.name} → ${lifecycle.recommendedName}**; khi áp dụng phải dùng live Linear status ID thuộc category \`${lifecycle.recommendedCategory}\`.`
+        : `- Cần quyết định lifecycle trước khi chuyển: **${projectStatus.name} → ${lifecycle.recommendedName}**; không tự reopen/complete/cancel.`]
+      : []),
+    ...(lifecycle.code === "continuous-needs-outcome"
+      ? ["- Không chuyển Completed chỉ vì hàng đợi trống; CPO cần mở outcome/milestone tiếp theo."]
+      : []),
+  ];
 
   return [
     `# Trạng thái dự án — ${snapshot.project.name}`,
     "", `Dữ liệu lúc: ${asOf.toISOString()}`, `Project: ${link(snapshot.project.name, snapshot.project.url)} (${snapshot.project.id})`,
     "", "## Project properties", "", `- ${projectProperties}.`,
-    ...(latestUpdate ? [`- Latest update: ${latestUpdate.createdAt ?? "unknown time"} — ${latestUpdate.summary ?? "không có summary"}.`] : ["- Chưa có Native Project Update."]),
+    ...(latestUpdate ? [`- Latest update: ${latestUpdate.createdAt ?? "unknown time"} — ${latestUpdate.summary ?? "không có summary"}`] : ["- Chưa có Native Project Update."]),
+    "", "## Nhất quán Project lifecycle", "", ...lifecycleLines,
     "", "## Tổng quan", "",
     `- ${done.length}/${issues.length} issue Done (${percent}%).`,
     `- ${effortPercent === null ? "Chưa đủ estimate để tính effort progress" : `${doneEffort}/${totalEffort} estimated effort Done (${effortPercent}%)`}.`,
@@ -89,9 +106,19 @@ export function buildProjectReport(snapshot) {
     ...(blocked.length ? blocked.map((issue) => `- Blocked: ${link(issue.title, issue.url)} — cần ${issue.blocker?.neededFrom ?? "làm rõ người xử lý"}.`) : ["- Không có blocker."]),
     ...(decisions.filter((issue) => issue.status !== "Done").length ? decisions.filter((issue) => issue.status !== "Done").map((issue) => `- Decision: ${link(issue.title, issue.url)} — owner ${issue.ownerRole ?? "chưa gán"}.`) : ["- Không có quyết định mở."]),
     "", "## Hành động tiếp theo", "",
+    ...(lifecycle.recommendedCategory && lifecycle.recommendedCategory !== projectStatus.category
+      ? [lifecycle.safeTransition
+        ? `- Project lead/CPO: xác nhận hoặc áp dụng chuyển Project sang ${lifecycle.recommendedName}.`
+        : `- CPO: quyết định có reopen Project sang ${lifecycle.recommendedName} hay đóng/cancel phần work còn mở.`]
+      : []),
+    ...(lifecycle.code === "continuous-needs-outcome"
+      ? ["- CPO: chọn outcome và milestone tiếp theo; giữ Project ở In Progress."]
+      : []),
     ...(review.length ? review.map((issue) => `- ${issue.reviewerRole ?? "Reviewer"}: review ${link(issue.title, issue.url)}.`) : []),
     ...(ready.length ? ready.slice(0, 5).map((issue) => `- ${issue.ownerRole ?? "Owner"}: thực hiện ${link(issue.title, issue.url)}.`) : []),
-    ...(!review.length && !ready.length ? ["- Làm rõ Refinement hoặc tháo blocker để tạo hàng đợi tiếp theo."] : []),
+    ...(!review.length && !ready.length && lifecycle.code !== "continuous-needs-outcome"
+      ? ["- Làm rõ Refinement, tháo blocker hoặc để CPO quyết định outcome tiếp theo."]
+      : []),
     "",
   ].join("\n");
 }

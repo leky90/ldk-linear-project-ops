@@ -8,13 +8,13 @@ import { validateProjectBinding } from "../scripts/lib.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 
-test("package exposes the same v1.1.1 plugin for Codex and Claude Code", async () => {
+test("package exposes the same v1.1.2 plugin for Codex and Claude Code", async () => {
   const codex = JSON.parse(await readFile(join(root, ".codex-plugin", "plugin.json"), "utf8"));
   const claude = JSON.parse(await readFile(join(root, ".claude-plugin", "plugin.json"), "utf8"));
   const marketplace = JSON.parse(await readFile(join(root, ".claude-plugin", "marketplace.json"), "utf8"));
   const packageJson = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
   assert.equal(packageJson.name, "ldk-linear-project-ops");
-  assert.equal(packageJson.version, "1.1.1");
+  assert.equal(packageJson.version, "1.1.2");
   assert.equal(codex.name, packageJson.name);
   assert.equal(codex.version.split("+")[0], packageJson.version);
   assert.equal(claude.name, packageJson.name);
@@ -78,10 +78,13 @@ test("old SQLite claim engine and automation-era schemas are removed", async () 
     "scripts/validate-project-update.mjs",
     "scripts/validate-legacy-cleanup.mjs",
     "scripts/render-project-update.mjs",
+    "scripts/project-lifecycle.mjs",
+    "scripts/analyze-project-lifecycle.mjs",
     "scripts/render-work-comment.mjs",
     "scripts/work-lock.mjs",
     "references/linear-hierarchy.md",
     "references/planning-properties.md",
+    "references/project-lifecycle.md",
     "references/legacy-cleanup.md",
     "references/git-closure.md",
     "assets/initiative-template.md",

@@ -48,3 +48,11 @@ Use only one direct sub-issue level. Split by deliverable, role, reviewer, depen
 - Sales Manager → Sales Representative → Sales Manager.
 
 The same Codex or Claude host may assume different roles in different runs, but one run performs only the role currently requested by the issue.
+
+## Project lifecycle
+
+Issue state and Project status are separate but must remain consistent. Before the
+first executing role-phase, move a Backlog/Planned Project to the live status in the
+In Progress category. Keep continuous lifecycle Projects In Progress between phases;
+an empty queue or completed launch milestone is not proof that the whole Project is
+Completed. See [project-lifecycle.md](project-lifecycle.md).

@@ -31,13 +31,41 @@
         "name": { "type": "string", "minLength": 1 },
         "summary": { "type": "string" },
         "description": { "type": "string" },
-        "status": { "enum": ["planned", "started", "paused", "completed", "canceled"] },
+        "status": {
+          "description": "Legacy read-compatible status name. New plans use projectStatus with a live Linear status ID.",
+          "enum": ["backlog", "planned", "started", "in-progress", "paused", "completed", "canceled"]
+        },
+        "projectStatus": { "$ref": "#/$defs/projectStatus" },
+        "lifecycle": { "$ref": "#/$defs/projectLifecycle" },
         "priority": { "$ref": "#/$defs/priority" },
         "leadId": { "type": "string", "minLength": 1 },
         "memberIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
         "startDate": { "$ref": "#/$defs/date" },
         "targetDate": { "$ref": "#/$defs/date" },
         "initiativeKeys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/key" } }
+      }
+    },
+    "projectStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "category"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "category": { "enum": ["backlog", "planned", "in-progress", "completed", "canceled"] }
+      }
+    },
+    "projectLifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "completionCriteria"],
+      "properties": {
+        "mode": { "enum": ["bounded", "continuous"] },
+        "completionCriteria": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
       }
     },
     "initiative": {

@@ -26,3 +26,8 @@ Native Initiative
 ```
 
 Legacy issue type `initiative` maps to `outcome` unless it actually represents a strategic objective spanning multiple Projects. Never silently create both.
+
+A `continuous` Project may span development, launch, operations, acquisition,
+conversion, and support when those phases share one declared Product end-state.
+Continuous does not mean an unbounded department backlog: keep lifecycle mode and
+completion criteria explicit, then use milestones/outcomes to advance each phase.

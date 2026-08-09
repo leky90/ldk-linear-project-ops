@@ -1,4 +1,4 @@
 interface:
   display_name: "Reconcile Linear Work"
-  short_description: "Repair inconsistencies and safely clean legacy work"
-  default_prompt: "Use $linear-reconcile to repair inconsistent Linear work or prepare an exact-ID legacy cleanup plan."
+  short_description: "Repair lifecycle and legacy inconsistencies"
+  default_prompt: "Use $linear-reconcile to repair inconsistent Project lifecycle status, issue handoffs, or legacy workflow data."
