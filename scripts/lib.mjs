@@ -25,6 +25,23 @@ export const DEFAULT_ROLES = Object.freeze({
   "sales-representative": { label: "role:sales-representative", defaultReviewer: "sales-manager" },
 });
 
+export const DELIVERY_MODES = Object.freeze([
+  "decision",
+  "artifact-review",
+  "publish",
+  "external-action",
+  "software-merge",
+  "production-release",
+  "operations-change",
+]);
+
+export const DELIVERY_PHASES = Object.freeze([
+  "review",
+  "ready-to-deliver",
+  "delivery-verification",
+  "complete",
+]);
+
 export async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
@@ -148,6 +165,9 @@ export function validateProjectBinding(binding, { allowPlaceholders = false, all
     errors.push("workflow must be an object");
   } else {
     for (const field of ["refinement", "ready", "inProgress", "inReview", "blocked", "done"]) requiredString(workflow.states?.[field], `workflow.states.${field}`, errors);
+    for (const field of ["readyToDeliver", "deliveryVerification"]) {
+      if (workflow.states?.[field] !== undefined) requiredString(workflow.states[field], `workflow.states.${field}`, errors);
+    }
     const roles = workflow.roles;
     if (!roles || typeof roles !== "object" || Array.isArray(roles) || Object.keys(roles).length === 0) {
       errors.push("workflow.roles must define at least one role");
@@ -192,7 +212,7 @@ export function validateWorkPlan(plan, { projectId, teamId, forApply = false, ro
   if (plan?.schemaVersion === 1) return validateLegacyWorkPlan(plan, { projectId, teamId, forApply, roles });
   const errors = [];
   if (!plan || typeof plan !== "object" || Array.isArray(plan)) return ["plan must be an object"];
-  if (plan.schemaVersion !== 2) errors.push("schemaVersion must be 2");
+  if (![2, 3].includes(plan.schemaVersion)) errors.push("schemaVersion must be 2 or 3");
   if (plan.kind !== "linear-role-work-plan") errors.push("kind must be linear-role-work-plan");
   if (!new Set(["preview", "apply"]).has(plan.mode)) errors.push("mode must be preview or apply");
   if (forApply && plan.mode !== "apply") errors.push("mode must be apply for mutations");
@@ -298,6 +318,18 @@ export function validateWorkPlan(plan, { projectId, teamId, forApply = false, ro
     requiredString(item.title, `${at}.title`, errors);
     requiredString(item.outcome, `${at}.outcome`, errors);
     requiredString(item.deliverable, `${at}.deliverable`, errors);
+    if (plan.schemaVersion === 3 && item.delivery === undefined) errors.push(`${at}.delivery is required for schemaVersion 3`);
+    if (item.delivery !== undefined) {
+      if (!item.delivery || typeof item.delivery !== "object" || Array.isArray(item.delivery)) {
+        errors.push(`${at}.delivery must be an object`);
+      } else {
+        if (!DELIVERY_MODES.includes(item.delivery.mode)) errors.push(`${at}.delivery.mode is invalid`);
+        validateRole(item.delivery.ownerRole, `${at}.delivery.ownerRole`, roles, errors);
+        if (item.delivery.target !== undefined) requiredString(item.delivery.target, `${at}.delivery.target`, errors);
+        validateStringArray(item.delivery.verification, `${at}.delivery.verification`, errors, { nonEmpty: true });
+        if (item.type === "decision" && item.delivery.mode !== "decision") errors.push(`${at}.decision requires delivery.mode decision`);
+      }
+    }
     if (!new Set(["Refinement", "Ready", "Blocked"]).has(item.status)) errors.push(`${at}.status is invalid`);
     if (!new Set(["urgent", "high", "normal", "low", "none"]).has(item.priority)) errors.push(`${at}.priority is invalid`);
     validateRole(item.ownerRole, `${at}.ownerRole`, roles, errors);
@@ -315,6 +347,21 @@ export function validateWorkPlan(plan, { projectId, teamId, forApply = false, ro
     } else {
       validateStringArray(item.relations.blockedByKeys, `${at}.relations.blockedByKeys`, errors);
       validateStringArray(item.relations.relatedToKeys, `${at}.relations.relatedToKeys`, errors);
+    }
+    if (item.externalBlocker !== undefined) {
+      if (!item.externalBlocker || typeof item.externalBlocker !== "object" || Array.isArray(item.externalBlocker)) {
+        errors.push(`${at}.externalBlocker must be an object`);
+      } else {
+        requiredString(item.externalBlocker.reason, `${at}.externalBlocker.reason`, errors);
+        validateRole(item.externalBlocker.ownerRole, `${at}.externalBlocker.ownerRole`, roles, errors);
+        requiredString(item.externalBlocker.resumeWhen, `${at}.externalBlocker.resumeWhen`, errors);
+      }
+    }
+    const blockedByKeys = Array.isArray(item.relations?.blockedByKeys) ? item.relations.blockedByKeys : [];
+    if (item.status === "Ready" && blockedByKeys.length > 0) errors.push(`${at}.Ready cannot have blockedByKeys`);
+    if (item.status === "Ready" && item.externalBlocker !== undefined) errors.push(`${at}.Ready cannot have an externalBlocker`);
+    if (item.status === "Blocked" && blockedByKeys.length === 0 && item.externalBlocker === undefined) {
+      errors.push(`${at}.Blocked requires blockedByKeys or externalBlocker`);
     }
   });
 
@@ -335,8 +382,13 @@ export function validateWorkPlan(plan, { projectId, teamId, forApply = false, ro
     for (const field of ["blockedByKeys", "relatedToKeys"]) {
       for (const key of relations[field] ?? []) if (!issueKeys.has(key)) errors.push(`${at}.relations.${field} references unknown issue ${key}`);
     }
+    if (relations.duplicateOfKey !== undefined) requiredString(relations.duplicateOfKey, `${at}.relations.duplicateOfKey`, errors);
     if (relations.duplicateOfKey && !issueKeys.has(relations.duplicateOfKey)) errors.push(`${at}.relations.duplicateOfKey references unknown issue ${relations.duplicateOfKey}`);
     if ((relations.blockedByKeys ?? []).includes(item?.key) || (relations.relatedToKeys ?? []).includes(item?.key) || relations.duplicateOfKey === item?.key) errors.push(`${at} cannot relate to itself`);
+    for (const key of relations.blockedByKeys ?? []) {
+      if ((relations.relatedToKeys ?? []).includes(key) || relations.duplicateOfKey === key) errors.push(`${at}.relations cannot assign multiple relation types to ${key}`);
+    }
+    if (relations.duplicateOfKey && (relations.relatedToKeys ?? []).includes(relations.duplicateOfKey)) errors.push(`${at}.relations cannot assign multiple relation types to ${relations.duplicateOfKey}`);
   });
   const dependencies = new Map(issues.map((item) => [item.key, item.relations?.blockedByKeys ?? []]));
   for (const cycle of detectCycles(issueKeys, dependencies)) errors.push(`dependency cycle: ${cycle.join(" -> ")}`);
@@ -545,6 +597,15 @@ export function validateHandoff(handoff, { roles = DEFAULT_ROLES } = {}) {
   if (handoff.type === "blocked") {
     for (const field of ["reason", "impact", "neededFrom", "resumeWhen"]) requiredString(handoff.blocker?.[field], `blocker.${field}`, errors);
   }
+  if (handoff.delivery !== undefined) {
+    if (!handoff.delivery || typeof handoff.delivery !== "object" || Array.isArray(handoff.delivery)) {
+      errors.push("delivery must be an object");
+    } else {
+      if (!DELIVERY_MODES.includes(handoff.delivery.mode)) errors.push("delivery.mode is invalid");
+      if (!DELIVERY_PHASES.includes(handoff.delivery.phase)) errors.push("delivery.phase is invalid");
+      if (handoff.delivery.target !== undefined) requiredString(handoff.delivery.target, "delivery.target", errors);
+    }
+  }
   if (handoff.software !== undefined) {
     if (handoff.type !== "handoff") errors.push("software evidence is only valid for a handoff");
     if (handoff.fromRole !== "software-engineer") errors.push("software evidence requires fromRole software-engineer");
@@ -566,6 +627,12 @@ export function renderWorkComment(handoff, { roles = DEFAULT_ROLES } = {}) {
   const bullets = (items, fallback = "- Không có.") => items?.length ? items.map((item) => `- ${item}`) : [fallback];
   const evidence = handoff.evidence?.length ? handoff.evidence.map((item) => `- **${item.label}:** ${item.value}`) : ["- Không có bằng chứng đính kèm."];
   const checks = handoff.checks?.length ? handoff.checks.map((item) => `- [${item.passed ? "x" : " "}] ${item.item}`) : ["- Không có kiểm tra được khai báo."];
+  const delivery = handoff.delivery ? [
+    "", "## Delivery", "",
+    `- **Mode:** ${handoff.delivery.mode}`,
+    `- **Phase:** ${handoff.delivery.phase}`,
+    ...(handoff.delivery.target ? [`- **Target:** ${handoff.delivery.target}`] : []),
+  ] : [];
   const next = ["", "## Bước tiếp theo", "", handoff.nextAction];
   if (handoff.type === "handoff") return [
     `## ✅ Bàn giao · ${role(handoff.fromRole)} → ${role(handoff.toRole)}`,
@@ -574,6 +641,7 @@ export function renderWorkComment(handoff, { roles = DEFAULT_ROLES } = {}) {
     "", "## Kiểm tra DoD", "", ...checks,
     "", "## Bằng chứng", "", ...evidence,
     "", "## Giới hạn đã biết", "", ...bullets(handoff.knownLimitations),
+    ...delivery,
     ...next, "",
   ].join("\n");
   if (handoff.type === "review") {
@@ -584,6 +652,7 @@ export function renderWorkComment(handoff, { roles = DEFAULT_ROLES } = {}) {
       "", "## Kiểm tra DoD", "", ...checks,
       "", "## Phát hiện", "", ...bullets(handoff.review.findings),
       "", "## Bằng chứng", "", ...evidence,
+      ...delivery,
       ...next, "",
     ].join("\n");
   }
@@ -594,12 +663,14 @@ export function renderWorkComment(handoff, { roles = DEFAULT_ROLES } = {}) {
     "", "## Ảnh hưởng", "", handoff.blocker.impact,
     "", "## Cần từ", "", handoff.blocker.neededFrom,
     "", "## Tiếp tục khi", "", handoff.blocker.resumeWhen,
+    ...delivery,
     ...next, "",
   ].join("\n");
   return [
     `## 🧭 Hòa giải · ${role(handoff.fromRole)}`,
     "", "## Kết quả", "", handoff.summary,
     "", "## Bằng chứng", "", ...evidence,
+    ...delivery,
     ...next, "",
   ].join("\n");
 }

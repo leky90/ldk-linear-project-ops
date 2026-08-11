@@ -37,6 +37,16 @@
             "ready": { "type": "string", "minLength": 1 },
             "inProgress": { "type": "string", "minLength": 1 },
             "inReview": { "type": "string", "minLength": 1 },
+            "readyToDeliver": {
+              "description": "Optional custom state. When absent, persist delivery.phase while keeping the issue In Review.",
+              "type": "string",
+              "minLength": 1
+            },
+            "deliveryVerification": {
+              "description": "Optional custom state. When absent, persist delivery.phase while keeping the issue In Review.",
+              "type": "string",
+              "minLength": 1
+            },
             "blocked": { "type": "string", "minLength": 1 },
             "done": { "type": "string", "minLength": 1 }
           }

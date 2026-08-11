@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "kind": "linear-role-work-plan",
   "mode": "preview",
   "summary": "Plan the example onboarding release using native Linear hierarchy.",
@@ -67,6 +67,11 @@
       "title": "Deliver the improved onboarding flow",
       "outcome": "New users reach activation with less friction.",
       "deliverable": "Approved implementation and verification package.",
+      "delivery": {
+        "mode": "artifact-review",
+        "ownerRole": "cpo",
+        "verification": ["CPO accepts the canonical implementation and verification package"]
+      },
       "status": "Ready",
       "priority": "high",
       "ownerRole": "tech-lead",
@@ -89,6 +94,16 @@
       "title": "Implement onboarding UI",
       "outcome": "Users can complete the new onboarding flow.",
       "deliverable": "Reviewed code and test evidence.",
+      "delivery": {
+        "mode": "software-merge",
+        "ownerRole": "software-engineer",
+        "target": "main",
+        "verification": [
+          "Reviewed PR is merged into main",
+          "Post-merge required checks pass",
+          "Disposable task worktree and local branch are safely closed"
+        ]
+      },
       "status": "Ready",
       "priority": "high",
       "ownerRole": "software-engineer",

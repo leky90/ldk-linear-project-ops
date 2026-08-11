@@ -1,9 +1,11 @@
 # Terminal Git closure
 
-Run this closure only when an issue is terminal (`Done` or `Canceled`), the
-associated PR is merged or closed, or the user explicitly requests cleanup. Do
-not remove delivery state merely because an engineer handed work to QA in `In
-Review`.
+Run this closure when a `software-merge` issue reaches `Delivery Verification`
+after merge, when an issue is terminal (`Done` or `Canceled`), when the associated
+PR is closed, or when the user explicitly requests cleanup. Do not remove delivery
+state merely because an engineer handed work to QA in `In Review` or because a PR
+is only merge-ready. Do not mark a `software-merge` issue `Done` before the required
+closure proof is complete or a preserved-state exception is reported explicitly.
 
 This is an agent workflow, not an automatic `Stop` hook. A hook does not have
 enough durable ownership context to decide that a branch or worktree is safe to
@@ -73,6 +75,10 @@ Before reporting completion, capture all of the following:
 - `git worktree list --porcelain` no longer contains the task worktree;
 - the exact local task branch is absent when it was safe to delete;
 - no unrelated worktree or branch was changed.
+
+For `software-merge`, also link the merged PR/commit and the required post-merge CI
+result. For `production-release`, Git closure does not replace deployment and
+production smoke evidence.
 
 If any proof is unavailable, report the remaining branch/worktree and the exact
 safety reason. Do not describe the workspace as clean merely because the Linear

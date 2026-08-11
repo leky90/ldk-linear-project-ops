@@ -14,7 +14,9 @@ Build a read-only management view by default. Publish a native Linear Project Up
    - ready work by role;
    - active work;
    - review queues by reviewer role;
+   - ready-to-deliver and delivery-verification queues by delivery owner, including persisted fallback phases when custom states are unavailable;
    - blockers and decisions;
+   - terminal-state mismatches such as `Done` without mode-specific evidence;
    - stale or inconsistent handoffs;
    - recently completed deliverables.
 5. Apply [project-lifecycle.md](../../references/project-lifecycle.md). When using the packaged snapshot path, run `analyze-project-lifecycle.mjs` or `build-project-report.mjs`; always include a `Project lifecycle consistency` result:
@@ -27,4 +29,12 @@ Build a read-only management view by default. Publish a native Linear Project Up
 7. Reports remain read-only. A direct request to fix/change/update Project status authorizes only a verified safe Backlog/Planned → In Progress correction using the exact live status ID; re-read the Project afterward. Reopen, Complete, Cancel, or ambiguous custom-status mutations require explicit authority.
 8. If publishing, draft `schemas/project-update.schema.json`, select health only from observed facts, validate with `validate-project-update.mjs --publish`, render with `render-project-update.mjs`, publish through Linear's native Project Update surface, and re-read it. Do not use an issue comment as a substitute.
 
-Use [project-status-template.md](../../assets/project-status-template.md), [project-update-template.md](../../assets/project-update-template.md), [planning-properties.md](../../references/planning-properties.md), and [project-lifecycle.md](../../references/project-lifecycle.md). Include direct Linear and resource links, a data timestamp, and a clear distinction between observed facts and inference.
+Issue delivery and Project lifecycle are separate: an issue delivery mismatch does
+not by itself authorize changing Project status. Use
+[delivery-lifecycle.md](../../references/delivery-lifecycle.md),
+[project-status-template.md](../../assets/project-status-template.md),
+[project-update-template.md](../../assets/project-update-template.md),
+[planning-properties.md](../../references/planning-properties.md), and
+[project-lifecycle.md](../../references/project-lifecycle.md). Include direct Linear
+and resource links, a data timestamp, and a clear distinction between observed facts
+and inference.

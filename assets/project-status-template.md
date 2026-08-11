@@ -29,6 +29,11 @@ Data timestamp: {{as_of}}
 
 ## Review queues
 
+## Ready to Deliver / Delivery Verification
+
+- Group by delivery owner and show persisted fallback phases when custom states are unavailable.
+- Flag `Done` issues that lack mode-specific terminal evidence.
+
 ## Blockers and decisions
 
 ## Next actions

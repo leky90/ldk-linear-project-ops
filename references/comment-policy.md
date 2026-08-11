@@ -24,6 +24,10 @@ not in an arbitrary issue comment. Validate the update before publishing it.
 6. Known limitations
 7. Next action
 
+When the issue is not terminal, also state the machine-validated delivery mode and
+phase. Do not describe `In Review`, `ready-to-deliver`, or
+`delivery-verification` as `Done`.
+
 ## Review structure
 
 1. `Review passed` or `Changes requested`

@@ -8,6 +8,13 @@
 
 {{reviewable_package}}
 
+## Delivery contract
+
+- Mode: `{{delivery_mode}}`
+- Delivery owner role: `{{delivery_owner_role}}`
+- Exact target: `{{delivery_target_or_not_applicable}}`
+- Terminal verification: {{delivery_verification}}
+
 ## Scope
 
 ### Included

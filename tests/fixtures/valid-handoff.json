@@ -15,5 +15,10 @@
     { "label": "PRD", "value": "Linear resource: Onboarding PRD" }
   ],
   "knownLimitations": ["Analytics naming still needs product confirmation"],
+  "delivery": {
+    "mode": "artifact-review",
+    "phase": "review",
+    "target": "Linear resource: Onboarding PRD"
+  },
   "nextAction": "Software Engineer implements the linked task and submits it for QA review."
 }

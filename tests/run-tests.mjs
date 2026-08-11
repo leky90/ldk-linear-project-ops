@@ -47,9 +47,14 @@ test("v2 binding validates and v1 binding is read-compatible", async () => {
   assert.equal(normalized.workflow.states.refinement, "ready");
   assert.deepEqual(normalized.workflow.roles, DEFAULT_ROLES);
   assert.equal(Object.hasOwn(normalized, "coordination"), false);
+  binding.workflow.states.readyToDeliver = "state-ready-to-deliver";
+  binding.workflow.states.deliveryVerification = "state-delivery-verification";
+  assert.deepEqual(validateProjectBinding(binding, { allowPlaceholders: true }), []);
+  binding.workflow.states.readyToDeliver = "";
+  assert.match(validateProjectBinding(binding, { allowPlaceholders: true }).join("\n"), /workflow\.states\.readyToDeliver is required/u);
 });
 
-test("v2 work plan enforces hierarchy, planning fields, references, and dependency DAG", async () => {
+test("v3 work plan enforces hierarchy, planning fields, references, and dependency DAG", async () => {
   const plan = await readJson(fixture("valid-work-plan.json"));
   assert.deepEqual(validateWorkPlan(plan, { projectId: "project-1", teamId: "team-1" }), []);
   assert.match(validateWorkPlan(plan, { forApply: true }).join("\n"), /mode must be apply/u);
@@ -82,9 +87,66 @@ test("v2 work plan enforces hierarchy, planning fields, references, and dependen
   assert.match(validateWorkPlan(plan).join("\n"), /must be a valid ISO date/u);
 });
 
+test("v3 work plan enforces readiness and structured blocker consistency", async () => {
+  const plan = await readJson(fixture("valid-work-plan.json"));
+  const task = plan.issues[1];
+  task.relations.relatedToKeys = [];
+  task.relations.blockedByKeys = ["demo.outcome.onboarding"];
+  assert.match(validateWorkPlan(plan).join("\n"), /Ready cannot have blockedByKeys/u);
+  task.status = "Blocked";
+  assert.deepEqual(validateWorkPlan(plan), []);
+  task.relations.blockedByKeys = [];
+  assert.match(validateWorkPlan(plan).join("\n"), /Blocked requires blockedByKeys or externalBlocker/u);
+  task.externalBlocker = {
+    reason: "Vendor access is pending.",
+    ownerRole: "cpo",
+    resumeWhen: "The vendor grants access.",
+  };
+  assert.deepEqual(validateWorkPlan(plan), []);
+  task.status = "Ready";
+  assert.match(validateWorkPlan(plan).join("\n"), /Ready cannot have an externalBlocker/u);
+  task.status = "Blocked";
+  task.externalBlocker.ownerRole = "unknown-specialist";
+  assert.match(validateWorkPlan(plan).join("\n"), /externalBlocker\.ownerRole references unknown role/u);
+});
+
+test("v3 work plan rejects conflicting native relation types", async () => {
+  const plan = await readJson(fixture("valid-work-plan.json"));
+  const task = plan.issues[1];
+  task.status = "Blocked";
+  task.relations.blockedByKeys = ["demo.outcome.onboarding"];
+  assert.match(validateWorkPlan(plan).join("\n"), /cannot assign multiple relation types/u);
+});
+
 test("v1 work plan remains read-compatible during the transition", async () => {
   const plan = await readJson(fixture("legacy-work-plan-v1.json"));
   assert.deepEqual(validateWorkPlan(plan, { projectId: "project-1", teamId: "team-1" }), []);
+});
+
+test("v2 work plans remain read-compatible while v3 requires a delivery contract", async () => {
+  const plan = await readJson(fixture("valid-work-plan.json"));
+  delete plan.issues[1].delivery;
+  assert.match(validateWorkPlan(plan).join("\n"), /delivery is required for schemaVersion 3/u);
+  plan.schemaVersion = 2;
+  delete plan.issues[0].delivery;
+  assert.deepEqual(validateWorkPlan(plan), []);
+});
+
+test("v3 delivery contracts validate mode, owner, verification, and decisions", async () => {
+  const plan = await readJson(fixture("valid-work-plan.json"));
+  const task = plan.issues[1];
+  task.delivery.mode = "proposal-only";
+  assert.match(validateWorkPlan(plan).join("\n"), /delivery\.mode is invalid/u);
+  task.delivery.mode = "software-merge";
+  task.delivery.ownerRole = "unknown-specialist";
+  assert.match(validateWorkPlan(plan).join("\n"), /delivery\.ownerRole references unknown role/u);
+  task.delivery.ownerRole = "software-engineer";
+  task.delivery.verification = [];
+  assert.match(validateWorkPlan(plan).join("\n"), /delivery\.verification must be non-empty/u);
+  task.delivery.verification = ["Merged PR is verified"];
+  task.type = "decision";
+  task.status = "Refinement";
+  assert.match(validateWorkPlan(plan).join("\n"), /decision requires delivery\.mode decision/u);
 });
 
 test("native project updates require publish intent and render a management update", async () => {
@@ -121,6 +183,7 @@ test("handoff validates DoD and renders one human-oriented comment", async () =>
   const comment = renderWorkComment(handoff);
   assert.match(comment, /## ✅ Bàn giao · tech lead → software engineer/u);
   assert.match(comment, /## Kiểm tra DoD/u);
+  assert.match(comment, /\*\*Phase:\*\* review/u);
   assert.match(comment, /\[x\] Scope is explicit/u);
   assert.doesNotMatch(comment, /token|heartbeat|run id|\{\s*"schemaVersion"/iu);
   handoff.checks[0].passed = false;
@@ -142,6 +205,12 @@ test("review outcome requires valid findings and checks", () => {
   };
   assert.deepEqual(validateHandoff(review), []);
   assert.match(renderWorkComment(review), /Review đạt/u);
+  review.delivery = { mode: "software-merge", phase: "ready-to-deliver", target: "main" };
+  assert.deepEqual(validateHandoff(review), []);
+  assert.match(renderWorkComment(review), /ready-to-deliver/u);
+  review.delivery.phase = "shipped";
+  assert.match(validateHandoff(review).join("\n"), /delivery\.phase is invalid/u);
+  review.delivery.phase = "ready-to-deliver";
   review.checks[0].passed = false;
   assert.match(validateHandoff(review).join("\n"), /passed review requires all checks/u);
 });

@@ -8,13 +8,13 @@ import { validateProjectBinding } from "../scripts/lib.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 
-test("package exposes the same v1.1.2 plugin for Codex and Claude Code", async () => {
+test("package exposes the same v1.2.0 plugin for Codex and Claude Code", async () => {
   const codex = JSON.parse(await readFile(join(root, ".codex-plugin", "plugin.json"), "utf8"));
   const claude = JSON.parse(await readFile(join(root, ".claude-plugin", "plugin.json"), "utf8"));
   const marketplace = JSON.parse(await readFile(join(root, ".claude-plugin", "marketplace.json"), "utf8"));
   const packageJson = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
   assert.equal(packageJson.name, "ldk-linear-project-ops");
-  assert.equal(packageJson.version, "1.1.2");
+  assert.equal(packageJson.version, "1.2.0");
   assert.equal(codex.name, packageJson.name);
   assert.equal(codex.version.split("+")[0], packageJson.version);
   assert.equal(claude.name, packageJson.name);
@@ -83,6 +83,8 @@ test("old SQLite claim engine and automation-era schemas are removed", async () 
     "scripts/render-work-comment.mjs",
     "scripts/work-lock.mjs",
     "references/linear-hierarchy.md",
+    "references/delivery-lifecycle.md",
+    "references/issue-relations.md",
     "references/planning-properties.md",
     "references/project-lifecycle.md",
     "references/legacy-cleanup.md",
@@ -92,6 +94,33 @@ test("old SQLite claim engine and automation-era schemas are removed", async () 
     "assets/outcome-issue-template.md",
     "assets/project-update-template.md",
   ]) await access(join(root, relative));
+});
+
+test("relation policy maps work-plan fields and guards readiness", async () => {
+  const policy = await readFile(join(root, "references", "issue-relations.md"), "utf8");
+  const create = await readFile(join(root, "skills", "linear-create-work", "SKILL.md"), "utf8");
+  const execute = await readFile(join(root, "skills", "linear-do-issue", "SKILL.md"), "utf8");
+  const reconcile = await readFile(join(root, "skills", "linear-reconcile", "SKILL.md"), "utf8");
+  for (const mapping of ["blockedByKeys", "blockedBy", "relatedToKeys", "relatedTo", "duplicateOfKey", "duplicateOf", "parentKey", "parentId"]) {
+    assert.match(policy, new RegExp(`\\b${mapping}\\b`, "u"));
+  }
+  assert.match(create, /blockedByKeys → blockedBy/u);
+  assert.match(execute, /read the blocker issue's live state/u);
+  assert.match(reconcile, /resolved dependency still blocking work/u);
+});
+
+test("delivery lifecycle keeps handoff, review, delivery, and Done distinct", async () => {
+  const policy = await readFile(join(root, "references", "delivery-lifecycle.md"), "utf8");
+  const execute = await readFile(join(root, "skills", "linear-do-issue", "SKILL.md"), "utf8");
+  const software = await readFile(join(root, "references", "software-work.md"), "utf8");
+  for (const mode of ["decision", "artifact-review", "publish", "external-action", "software-merge", "production-release", "operations-change"]) {
+    assert.match(policy, new RegExp(`\\b${mode}\\b`, "u"));
+  }
+  assert.match(execute, /Ready to Deliver/u);
+  assert.match(execute, /Delivery Verification/u);
+  assert.match(execute, /review passed for `publish`/u);
+  assert.match(software, /QA pass moves the issue to `Ready to Deliver`/u);
+  assert.match(software, /intermediate packet PRs are checkpoints/u);
 });
 
 test("source repository contains no live project binding or credentials", async () => {

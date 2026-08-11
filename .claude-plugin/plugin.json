@@ -1,6 +1,6 @@
 {
   "name": "ldk-linear-project-ops",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Role-based Linear delivery with lifecycle-aware Project status, native planning, project updates, and safe cleanup.",
   "author": {
     "name": "LDKTech Solutions"

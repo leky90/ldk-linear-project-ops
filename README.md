@@ -38,11 +38,14 @@ Engineer, Writer, Marketer, Sales… tạo deliverable
         ↓
 QA/Lead/Director review DoD và evidence
         ↓
-Done hoặc trả về Ready kèm findings
+Artifact/decision hoàn tất → Done
+        hoặc
+Ready to Deliver → Delivery Verification → Done
 ```
 
 Một issue khai báo outcome, deliverable, `ownerRole`, `reviewerRole`, DoR, DoD,
-resources, relations và planning properties cần thiết. Câu lệnh thường dùng vẫn là:
+delivery mode/owner/verification, resources, relations và planning properties cần
+thiết. Câu lệnh thường dùng vẫn là:
 
 ```text
 Hãy thực hiện issue LDK-123
@@ -53,6 +56,8 @@ Plugin tự đọc live state và thực hiện đúng một role phase:
 - `Refinement`: làm rõ hoặc phân rã outcome;
 - `Ready`: owner thực hiện rồi bàn giao `In Review`;
 - `In Review`: reviewer nghiệm thu, chuyển `Done` hoặc trả `Ready`;
+- `Ready to Deliver`: review đạt nhưng merge/publish/deploy/external action chưa có bằng chứng;
+- `Delivery Verification`: terminal action đã xảy ra và đang xác minh kết quả/cleanup;
 - `Blocked`: ghi blocker, ảnh hưởng, người cần xử lý và điều kiện tiếp tục;
 - `Done`: không thực hiện lại nếu không có yêu cầu mở lại rõ ràng.
 
@@ -64,19 +69,33 @@ Plugin tự đọc live state và thực hiện đúng một role phase:
   người dùng yêu cầu trực tiếp.
 - `linear-reconcile`: sửa bất nhất và dọn legacy bằng preview exact-ID có phê duyệt.
 
-## Work plan v2
+## Work plan v3
 
-Schema canonical là `schemas/work-plan.schema.json` v2. Nó hỗ trợ:
+Schema canonical là `schemas/work-plan.schema.json` v3. Nó hỗ trợ:
 
 - native Initiative, Project và Milestone;
 - live project status ID/name/category, lifecycle mode, completion criteria, priority/lead/members/start/target;
 - outcome, task, decision và parent-child;
 - assignee, estimate, cycle, due date, milestone;
 - blocked-by, related-to và duplicate-of;
+- structured external blocker cho dependency thực sự nằm ngoài issue graph;
 - resources, DoR, DoD và role routing.
+- delivery contract bắt buộc với mode, owner, target tùy chọn và terminal verification.
 
-Plan v1 vẫn được đọc trong một phiên bản chuyển tiếp; mọi plan mới phải ghi v2 và
-map issue-level `initiative` cũ thành `outcome`.
+`blockedByKeys` là chiều canonical trong work plan và map sang native Linear
+`blockedBy`; chiều `blocks` được suy ra. `relatedToKeys` map sang `relatedTo`,
+`duplicateOfKey` map sang `duplicateOf`, và `parentKey` map sang `parentId`. Issue
+`Ready` không được còn blocker; issue `Blocked` phải có native blocker hoặc
+`externalBlocker` với owner và điều kiện tiếp tục. Xem
+`references/issue-relations.md`.
+
+Các delivery mode là `decision`, `artifact-review`, `publish`, `external-action`,
+`software-merge`, `production-release` và `operations-change`. Role-phase DoD chỉ
+cho phép bàn giao; `Done` còn cần bằng chứng terminal đúng mode. Xem
+`references/delivery-lifecycle.md`.
+
+Plan v1/v2 vẫn được đọc để tương thích; mọi plan mới phải ghi v3 và map issue-level
+`initiative` cũ thành `outcome`.
 
 ## Project status và legacy cleanup
 
@@ -116,12 +135,19 @@ Copy `examples/project-binding.example.json` thành `.linear-project-ops.json` �
 repository dự án, thay placeholder bằng project/team/state ID thật và giữ binding
 ngoài Git. Kết nối Linear bằng OAuth connector/MCP chính thức của host.
 
+Nếu workspace có custom issue states tương ứng, thêm `readyToDeliver` và
+`deliveryVerification` vào `workflow.states` bằng exact live state ID. Nếu không có,
+plugin giữ issue ở `In Review` và ghi delivery phase vào handoff/resource đã validate;
+không bắt buộc thay workflow Linear hiện hữu.
+
 ## Software delivery
 
 Engineer dùng linked worktree riêng với baseline sạch. Trước handoff sang QA, mọi
 thay đổi trong scope phải được commit, worktree sạch và evidence trỏ đúng HEAD. QA
-review commit/PR/test evidence bất biến, không tiếp quản worktree của engineer.
-Merge/deploy chỉ xảy ra khi issue/DoD và quyền được giao yêu cầu rõ ràng.
+review commit/PR/test evidence bất biến, không tiếp quản worktree của engineer. Với
+`software-merge`, QA pass chỉ tạo trạng thái merge-ready; issue chỉ `Done` sau khi PR
+đã merge, post-merge checks xanh và local delivery state được đóng an toàn. Deploy
+production dùng `production-release` với smoke/rollback evidence riêng.
 
 Khi issue chuyển sang trạng thái kết thúc, agent phải đưa primary checkout về
 `main`, fast-forward an toàn, rồi dọn worktree/branch local đã merge hoặc có patch

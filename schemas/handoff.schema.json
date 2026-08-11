@@ -40,6 +40,7 @@
     },
     "knownLimitations": { "type": "array", "items": { "type": "string" } },
     "nextAction": { "type": "string", "minLength": 1 },
+    "delivery": { "$ref": "#/$defs/delivery" },
     "review": {
       "type": "object",
       "additionalProperties": false,
@@ -87,7 +88,29 @@
     }
   },
   "$defs": {
-    "role": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }
+    "role": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "phase"],
+      "properties": {
+        "mode": {
+          "enum": [
+            "decision",
+            "artifact-review",
+            "publish",
+            "external-action",
+            "software-merge",
+            "production-release",
+            "operations-change"
+          ]
+        },
+        "phase": {
+          "enum": ["review", "ready-to-deliver", "delivery-verification", "complete"]
+        },
+        "target": { "type": "string", "minLength": 1 }
+      }
+    }
   },
   "allOf": [
     {

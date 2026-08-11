@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://ldktech.dev/schemas/linear-role-work-plan-v2.schema.json",
+  "$id": "https://ldktech.dev/schemas/linear-role-work-plan-v3.schema.json",
   "title": "Linear RoleFlow Work Plan",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "kind", "mode", "project", "summary", "initiatives", "milestones", "resources", "issues"],
   "properties": {
-    "schemaVersion": { "const": 2 },
+    "schemaVersion": { "const": 3 },
     "kind": { "const": "linear-role-work-plan" },
     "mode": { "enum": ["preview", "apply"] },
     "summary": { "type": "string", "minLength": 1 },
@@ -115,15 +115,64 @@
       "additionalProperties": false,
       "required": ["blockedByKeys", "relatedToKeys"],
       "properties": {
-        "blockedByKeys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/key" } },
-        "relatedToKeys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/key" } },
-        "duplicateOfKey": { "$ref": "#/$defs/key" }
+        "blockedByKeys": {
+          "description": "Canonical incoming dependencies. Apply with Linear blockedBy; the inverse blocks relation is derived.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/key" }
+        },
+        "relatedToKeys": {
+          "description": "Symmetric issue relations. Apply with Linear relatedTo; there is no relatedBy field.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/key" }
+        },
+        "duplicateOfKey": {
+          "description": "Canonical issue this issue duplicates. Apply with Linear duplicateOf.",
+          "$ref": "#/$defs/key"
+        }
+      }
+    },
+    "externalBlocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason", "ownerRole", "resumeWhen"],
+      "properties": {
+        "reason": { "type": "string", "minLength": 1 },
+        "ownerRole": { "$ref": "#/$defs/role" },
+        "resumeWhen": { "type": "string", "minLength": 1 }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "ownerRole", "verification"],
+      "properties": {
+        "mode": {
+          "enum": [
+            "decision",
+            "artifact-review",
+            "publish",
+            "external-action",
+            "software-merge",
+            "production-release",
+            "operations-change"
+          ]
+        },
+        "ownerRole": { "$ref": "#/$defs/role" },
+        "target": { "type": "string", "minLength": 1 },
+        "verification": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
       }
     },
     "issue": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["key", "type", "title", "outcome", "deliverable", "status", "priority", "ownerRole", "definitionOfReady", "definitionOfDone", "resourceKeys", "relations"],
+      "required": ["key", "type", "title", "outcome", "deliverable", "delivery", "status", "priority", "ownerRole", "definitionOfReady", "definitionOfDone", "resourceKeys", "relations"],
       "properties": {
         "key": { "$ref": "#/$defs/key" },
         "linearId": { "type": "string", "minLength": 1 },
@@ -133,6 +182,7 @@
         "outcome": { "type": "string", "minLength": 1 },
         "context": { "type": "string" },
         "deliverable": { "type": "string", "minLength": 1 },
+        "delivery": { "$ref": "#/$defs/delivery" },
         "status": { "enum": ["Refinement", "Ready", "Blocked"] },
         "priority": { "$ref": "#/$defs/priority" },
         "ownerRole": { "$ref": "#/$defs/role" },
@@ -146,8 +196,56 @@
         "definitionOfReady": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
         "definitionOfDone": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
         "resourceKeys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/key" } },
+        "externalBlocker": { "$ref": "#/$defs/externalBlocker" },
         "relations": { "$ref": "#/$defs/relations" }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "decision" } }
+          },
+          "then": {
+            "properties": {
+              "delivery": {
+                "properties": { "mode": { "const": "decision" } }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["status"],
+            "properties": { "status": { "const": "Ready" } }
+          },
+          "then": {
+            "not": { "required": ["externalBlocker"] },
+            "properties": {
+              "relations": {
+                "properties": { "blockedByKeys": { "maxItems": 0 } }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["status"],
+            "properties": { "status": { "const": "Blocked" } }
+          },
+          "then": {
+            "anyOf": [
+              {
+                "properties": {
+                  "relations": {
+                    "properties": { "blockedByKeys": { "minItems": 1 } }
+                  }
+                }
+              },
+              { "required": ["externalBlocker"] }
+            ]
+          }
+        }
+      ]
     }
   }
 }

@@ -8,10 +8,19 @@ Treat one issue as one role-owned work packet inside a native Linear Project. It
 - one current `role:*` label;
 - an optional reviewer role;
 - Definition of Ready (DoR);
-- Definition of Done (DoD);
-- durable resources and real blocker relations.
+- role-phase Definition of Done (DoD);
+- one declared delivery mode, terminal owner, and verification contract;
+- durable resources and real blocker relations, or a structured external blocker
+  when the dependency is genuinely outside the planned issue graph.
 
-DoR determines whether the current role may start. DoD determines whether that role may hand off. Review determines acceptance; it is not performed by the delivering role.
+DoR determines whether the current role may start. DoD determines whether that role
+may hand off. Review determines acceptance; it is not performed by the delivering
+role. Neither handoff nor review alone means the issue is terminal: use
+[delivery-lifecycle.md](delivery-lifecycle.md) to verify the real outcome.
+
+Every DoR dependency on another planned issue, decision, or role-owned deliverable
+must be represented by a native blocker relation. See
+[issue-relations.md](issue-relations.md).
 
 ## States
 
@@ -19,11 +28,19 @@ DoR determines whether the current role may start. DoD determines whether that r
 - `Ready`: current role can start and no blocker is open.
 - `In Progress`: work on the outcome or issue has begun. This is human progress, not proof of a machine lock.
 - `In Review`: the deliverable is handed to the reviewer role with evidence.
+- `Ready to Deliver`: review and pre-delivery gates passed; an approved publish,
+  merge, submission, external action, or operational change is still pending.
+- `Delivery Verification`: the terminal action occurred and its checks, audit,
+  measurement, or cleanup are being verified.
 - `Blocked`: execution stopped with an explicit owner and resume condition.
-- `Done`: required review passed, or the issue explicitly requires no separate review.
+- `Done`: the declared delivery mode has terminal evidence. A role handoff, approved
+  artifact, or QA pass is insufficient when a later delivery action is in scope.
 - `Canceled`: intentionally abandoned or superseded.
 
-On changes requested, return the issue to `Ready` and restore the delivering role. Do not leave an issue `In Progress` when no one owns an active work phase.
+On changes requested, return the issue to `Ready` and restore the delivering role.
+Do not leave an issue `In Progress` when no one owns an active work phase. When the
+workspace lacks either optional delivery state, keep `In Review` and persist the
+validated delivery phase instead of inventing a state or prematurely using `Done`.
 
 ## Planning hierarchy and issue types
 
@@ -42,7 +59,9 @@ Use only one direct sub-issue level. Split by deliverable, role, reviewer, depen
 - CPO → Tech Lead: product brief/PRD becomes a technical breakdown request.
 - Tech Lead → Software Engineer: implementation task with technical context and QA-ready DoD.
 - Software Engineer → QA: PR/commit/test evidence.
-- QA → Software Engineer: changes requested; or QA → Done: review passed.
+- QA → Software Engineer: changes requested; QA → Ready to Deliver when a merge or
+  release remains; QA → Done only when the reviewed artifact/verdict is itself the
+  declared terminal outcome.
 - Content Director → Content Writer → Content Director.
 - Marketing Lead → Marketer → Marketing Lead.
 - Sales Manager → Sales Representative → Sales Manager.

@@ -12,6 +12,13 @@ Explain why the work matters and link the parent outcome.
 
 Name one concrete output owned by the current role.
 
+## Delivery contract
+
+- Mode: decision | artifact-review | publish | external-action | software-merge | production-release | operations-change
+- Delivery owner role:
+- Exact target (when applicable):
+- Terminal verification:
+
 ## Definition of Ready
 
 - [ ] Requirements and boundaries are clear.
@@ -28,6 +35,12 @@ Name one concrete output owned by the current role.
 ## Resources
 
 - Brief/PRD/design/repository/source material:
+
+## Dependencies
+
+- Blocked by (native Linear relation):
+- Related to (native Linear relation):
+- External blocker, owner and resume condition (only when outside the issue graph):
 
 ## Handoff
 
