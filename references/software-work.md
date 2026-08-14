@@ -16,11 +16,15 @@ Apply these controls only while the current role is `software-engineer`. They ar
 2. Stage explicit paths; never use a broad repository add.
 3. Commit, push, and open/update a PR when required by DoD.
 4. Validate the live worktree, commit range, and scope with the packaged handoff validator.
-5. Put commit, PR, CI, preview, and test artifacts in the handoff evidence.
+5. Keep repository-native technical evidence—technical specs, ADRs, BDD/TDD contracts, commands, raw test reports, and local verification—in the repository. Put only accessible commit, PR, CI, preview, or resource references in the Linear handoff evidence; omit local paths.
 
 The engineer may hand off only when the issue DoD and internal Git guard pass. After
 handoff, QA reviews immutable commit/PR/test evidence and does not need the
 engineer's local worktree or baseline.
+
+A local-only commit is an immutable checkpoint for local QA, not publication,
+merge, production release, or terminal delivery evidence. The issue description
+remains the stable planning contract; implementation chronology belongs in Git.
 
 Use `artifact-review` for a specification, BDD RED contract, technical decision, or
 other software artifact whose accepted artifact is terminal. Any issue whose outcome

@@ -42,6 +42,22 @@ export const DELIVERY_PHASES = Object.freeze([
   "complete",
 ]);
 
+const TERMINAL_DELIVERY_PATTERNS = Object.freeze({
+  "software-merge": [
+    /\b(?:pull request|PR)\b.*\bmerge(?:d)?\b/iu,
+    /\bmerge(?:d)?\b.*\b(?:main|integration branch|pull request|PR)\b/iu,
+  ],
+  "production-release": [
+    /\bproduction\s+(?:deploy(?:ment|ed)?|release|rollout|smoke)\b/iu,
+    /\bdeploy(?:ed|ment)?\s+(?:to\s+)?production\b/iu,
+    /\bpublic\s+rollout\b/iu,
+  ],
+  "operations-change": [
+    /\bHSTS\b.*\b(?:edge|final public|readback|response|rule|ruleset)\b/iu,
+    /\b(?:apply|create|update|change|verify|readback)\b.*\b(?:Cloudflare.*(?:rule|ruleset)|DNS|WAF|edge configuration|HSTS)\b/iu,
+  ],
+});
+
 export async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
@@ -328,6 +344,16 @@ export function validateWorkPlan(plan, { projectId, teamId, forApply = false, ro
         if (item.delivery.target !== undefined) requiredString(item.delivery.target, `${at}.delivery.target`, errors);
         validateStringArray(item.delivery.verification, `${at}.delivery.verification`, errors, { nonEmpty: true });
         if (item.type === "decision" && item.delivery.mode !== "decision") errors.push(`${at}.decision requires delivery.mode decision`);
+        if (Array.isArray(item.delivery.verification) && DELIVERY_MODES.includes(item.delivery.mode)) {
+          const conflictingModes = Object.entries(TERMINAL_DELIVERY_PATTERNS)
+            .filter(([mode, patterns]) => mode !== item.delivery.mode
+              && item.delivery.verification.some((check) => typeof check === "string"
+                && patterns.some((pattern) => pattern.test(check))))
+            .map(([mode]) => mode);
+          if (conflictingModes.length) {
+            errors.push(`${at} has a mixed terminal delivery boundary: ${item.delivery.mode} verification also requires ${conflictingModes.join(", ")}; split independently authorized terminal actions into separate issues`);
+          }
+        }
       }
     }
     if (!new Set(["Refinement", "Ready", "Blocked"]).has(item.status)) errors.push(`${at}.status is invalid`);
@@ -624,9 +650,28 @@ export function renderWorkComment(handoff, { roles = DEFAULT_ROLES } = {}) {
   const errors = validateHandoff(handoff, { roles });
   if (errors.length) throw new Error(`invalid handoff: ${errors.join("; ")}`);
   const role = (value) => value?.replaceAll("-", " ") ?? "—";
-  const bullets = (items, fallback = "- Không có.") => items?.length ? items.map((item) => `- ${item}`) : [fallback];
-  const evidence = handoff.evidence?.length ? handoff.evidence.map((item) => `- **${item.label}:** ${item.value}`) : ["- Không có bằng chứng đính kèm."];
-  const checks = handoff.checks?.length ? handoff.checks.map((item) => `- [${item.passed ? "x" : " "}] ${item.item}`) : ["- Không có kiểm tra được khai báo."];
+  const compactBullets = (items, { fallback = "- Không có.", limit = 3, overflowLabel = "mục" } = {}) => {
+    if (!items?.length) return [fallback];
+    const visible = items.slice(0, limit).map((item) => `- ${item}`);
+    const hidden = items.length - visible.length;
+    if (hidden > 0) visible.push(`- +${hidden} ${overflowLabel} khác được giữ trong artifact bền vững.`);
+    return visible;
+  };
+  const localOnlyEvidence = (value) => typeof value === "string" && /^(?:\/|[A-Za-z]:\\|\.{0,2}\/|(?:docs|tests|src|app|lib|\.delivery|\.linear-ops)\/)/u.test(value.trim());
+  const visibleEvidence = (handoff.evidence ?? []).filter((item) => !localOnlyEvidence(item.value));
+  const hiddenLocalEvidenceCount = (handoff.evidence ?? []).length - visibleEvidence.length;
+  const evidence = visibleEvidence.length
+    ? visibleEvidence.slice(0, 3).map((item) => `- **${item.label}:** ${item.value}`)
+    : ["- Không có bằng chứng truy cập được đính kèm."];
+  if (visibleEvidence.length > 3) evidence.push(`- +${visibleEvidence.length - 3} bằng chứng khác được giữ trong artifact bền vững.`);
+  if (hiddenLocalEvidenceCount > 0) evidence.push(`- ${hiddenLocalEvidenceCount} bằng chứng local-only được giữ ngoài Linear.`);
+  const passedChecks = (handoff.checks ?? []).filter((item) => item.passed).length;
+  const checks = handoff.checks?.length
+    ? [
+        `- [${passedChecks === handoff.checks.length ? "x" : " "}] ${passedChecks}/${handoff.checks.length} checks passed.`,
+        ...handoff.checks.filter((item) => !item.passed).slice(0, 3).map((item) => `- [ ] ${item.item}`),
+      ]
+    : ["- Không có kiểm tra được khai báo."];
   const delivery = handoff.delivery ? [
     "", "## Delivery", "",
     `- **Mode:** ${handoff.delivery.mode}`,
@@ -637,10 +682,10 @@ export function renderWorkComment(handoff, { roles = DEFAULT_ROLES } = {}) {
   if (handoff.type === "handoff") return [
     `## ✅ Bàn giao · ${role(handoff.fromRole)} → ${role(handoff.toRole)}`,
     "", "## Kết quả", "", handoff.summary,
-    "", "## Sản phẩm bàn giao", "", ...bullets(handoff.deliverables),
+    "", "## Sản phẩm bàn giao", "", ...compactBullets(handoff.deliverables, { overflowLabel: "sản phẩm bàn giao" }),
     "", "## Kiểm tra DoD", "", ...checks,
     "", "## Bằng chứng", "", ...evidence,
-    "", "## Giới hạn đã biết", "", ...bullets(handoff.knownLimitations),
+    "", "## Giới hạn đã biết", "", ...compactBullets(handoff.knownLimitations, { overflowLabel: "giới hạn" }),
     ...delivery,
     ...next, "",
   ].join("\n");
@@ -650,7 +695,7 @@ export function renderWorkComment(handoff, { roles = DEFAULT_ROLES } = {}) {
       `## ${passed ? "✅ Review đạt" : "🔁 Yêu cầu chỉnh sửa"} · ${role(handoff.fromRole)}`,
       "", "## Kết luận", "", handoff.summary,
       "", "## Kiểm tra DoD", "", ...checks,
-      "", "## Phát hiện", "", ...bullets(handoff.review.findings),
+      "", "## Phát hiện", "", ...compactBullets(handoff.review.findings, { limit: 5, overflowLabel: "phát hiện" }),
       "", "## Bằng chứng", "", ...evidence,
       ...delivery,
       ...next, "",

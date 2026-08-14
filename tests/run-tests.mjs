@@ -149,6 +149,17 @@ test("v3 delivery contracts validate mode, owner, verification, and decisions", 
   assert.match(validateWorkPlan(plan).join("\n"), /decision requires delivery\.mode decision/u);
 });
 
+test("v3 work plan rejects mixed terminal delivery boundaries", async () => {
+  const plan = await readJson(fixture("valid-work-plan.json"));
+  const task = plan.issues[1];
+  task.delivery.mode = "software-merge";
+  task.delivery.verification = [
+    "Reviewed PR is merged into main",
+    "Production smoke confirms HSTS on the final public edge response",
+  ];
+  assert.match(validateWorkPlan(plan).join("\n"), /mixed terminal delivery boundary.*production-release.*operations-change/u);
+});
+
 test("native project updates require publish intent and render a management update", async () => {
   const update = await readJson(fixture("valid-project-update.json"));
   assert.deepEqual(validateProjectUpdate(update, { projectId: "project-1" }), []);
@@ -184,10 +195,33 @@ test("handoff validates DoD and renders one human-oriented comment", async () =>
   assert.match(comment, /## ✅ Bàn giao · tech lead → software engineer/u);
   assert.match(comment, /## Kiểm tra DoD/u);
   assert.match(comment, /\*\*Phase:\*\* review/u);
-  assert.match(comment, /\[x\] Scope is explicit/u);
+  assert.match(comment, /2\/2 checks passed/u);
+  assert.doesNotMatch(comment, /\[x\] Scope is explicit/u);
   assert.doesNotMatch(comment, /token|heartbeat|run id|\{\s*"schemaVersion"/iu);
   handoff.checks[0].passed = false;
   assert.match(validateHandoff(handoff).join("\n"), /all Definition of Done checks must pass/u);
+});
+
+test("handoff comment stays compact and omits local-only evidence", async () => {
+  const handoff = await readJson(fixture("valid-handoff.json"));
+  handoff.deliverables = ["One", "Two", "Three", "Four", "Five"];
+  handoff.checks = Array.from({ length: 8 }, (_, index) => ({ item: `Check ${index + 1}`, passed: true }));
+  handoff.evidence = [
+    { label: "Commit", value: "0123456789abcdef" },
+    { label: "PR", value: "https://github.com/example/repo/pull/1" },
+    { label: "Local RED", value: ".delivery/evidence/red.md" },
+    { label: "Local GREEN", value: "/Users/example/project/green.md" },
+    { label: "CI", value: "https://github.com/example/repo/actions/runs/1" },
+  ];
+  handoff.knownLimitations = ["One", "Two", "Three", "Four"];
+
+  const comment = renderWorkComment(handoff);
+  assert.match(comment, /8\/8 checks passed/u);
+  assert.match(comment, /2 sản phẩm bàn giao khác/u);
+  assert.match(comment, /2 bằng chứng local-only/u);
+  assert.match(comment, /1 giới hạn khác/u);
+  assert.doesNotMatch(comment, /\.delivery\/|\/Users\/example/u);
+  assert.ok(comment.length < 1800);
 });
 
 test("review outcome requires valid findings and checks", () => {

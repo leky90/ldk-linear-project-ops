@@ -90,6 +90,7 @@ test("old SQLite claim engine and automation-era schemas are removed", async () 
     "references/legacy-cleanup.md",
     "references/git-closure.md",
     "references/tracker-routing.md",
+    "references/artifact-routing.md",
     "assets/initiative-template.md",
     "assets/milestone-template.md",
     "assets/outcome-issue-template.md",
@@ -122,6 +123,20 @@ test("delivery lifecycle keeps handoff, review, delivery, and Done distinct", as
   assert.match(execute, /review passed for `publish`/u);
   assert.match(software, /QA pass moves the issue to `Ready to Deliver`/u);
   assert.match(software, /intermediate packet PRs are checkpoints/u);
+});
+
+test("artifact routing keeps planning contracts separate from execution evidence", async () => {
+  const policy = await readFile(join(root, "references", "artifact-routing.md"), "utf8");
+  const create = await readFile(join(root, "skills", "linear-create-work", "SKILL.md"), "utf8");
+  const execute = await readFile(join(root, "skills", "linear-do-issue", "SKILL.md"), "utf8");
+  const reconcile = await readFile(join(root, "skills", "linear-reconcile", "SKILL.md"), "utf8");
+
+  assert.match(policy, /stable planning contract/u);
+  assert.match(policy, /One issue has one terminal delivery mode/u);
+  for (const skill of [create, execute, reconcile]) assert.match(skill, /artifact-routing\.md/u);
+  assert.match(create, /timestamped execution history/u);
+  assert.match(execute, /repository-native technical evidence/u);
+  assert.match(reconcile, /append-only execution journal/u);
 });
 
 test("source repository contains no live project binding or credentials", async () => {

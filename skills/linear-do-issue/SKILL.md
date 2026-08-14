@@ -6,6 +6,9 @@ description: Perform one Linear issue as its currently responsible role, align a
 # Do One Linear Issue
 
 Treat one run as one employee performing one role-phase. Do not switch to another issue or adopt the next role unless the user explicitly asks.
+Route artifacts with [artifact-routing.md](../../references/artifact-routing.md): the
+issue remains a planning contract, repository-native technical evidence remains in
+the repository, and Linear receives only durable links plus a concise human handoff.
 
 ## Route the issue
 
@@ -34,7 +37,7 @@ Treat one run as one employee performing one role-phase. Do not switch to anothe
 2. Perform the actual role deliverable using attached resources and the relevant repository/domain workflow.
 3. For a tech lead, break an `outcome` issue into independently owned direct sub-issues only when breakdown is the requested deliverable. Do not time-slice work for agent convenience and never create an issue-level `initiative`.
 4. For software implementation, follow [software-work.md](../../references/software-work.md): isolate Git work internally, verify scope, and produce commit/PR/test evidence before QA handoff.
-5. Update durable resources first. Comments summarize and link; they do not become the artifact.
+5. Update the correct durable artifact first. Do not turn an issue description or resource into an append-only phase journal. Repository-native technical evidence—specs, ADRs, BDD/TDD state, commands, local verification, and implementation history—stays in the repository. Comments summarize and link accessible commit/PR/CI/resource evidence; they do not become the artifact.
 6. Check the role-phase Definition of Done and create a local handoff JSON matching `schemas/handoff.schema.json`, including `delivery.mode` and the resulting `delivery.phase`.
 7. Validate and render the human comment with `validate-handoff.mjs` and `render-work-comment.mjs`.
 8. Post exactly one handoff, review, or blocked comment using [comment-policy.md](../../references/comment-policy.md).
