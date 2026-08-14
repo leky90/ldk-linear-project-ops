@@ -8,6 +8,11 @@ Repository này chỉ chứa source và gói cài đặt plugin. Nó không gắ
 Linear cụ thể, không chứa lịch sử vận hành của LDKTech Solutions và không cần
 `LINEAR_API_KEY` khi host đã kết nối Linear qua OAuth.
 
+Nếu repository có cả `.linear-project-ops.json` và `.github-project-ops.json`, tên,
+URL hoặc ID native của tracker sẽ quyết định plugin được dùng. Một yêu cầu chung như
+“tạo các issues” phải dừng để chọn Linear hoặc GitHub; hai plugin không được cùng ghi
+hay tự sao chép dữ liệu qua lại. Xem `references/tracker-routing.md`.
+
 ## Mô hình dữ liệu Linear
 
 ```text

@@ -7,9 +7,15 @@ description: Create or update native Linear initiatives, projects, milestones, r
 
 Turn an owner's intent into native Linear planning objects and human-readable role-owned work packets. Follow `Initiative → Project → Milestone → Issue → Sub-issue`; never use an issue-level `initiative` type.
 
+Before selecting a tracker, read [tracker-routing.md](../../references/tracker-routing.md).
+Never mirror, migrate, or duplicate work into GitHub merely because a GitHub binding
+also exists.
+
 ## Workflow
 
 1. Load and validate `.linear-project-ops.json`; pin the exact project and team IDs.
+   If an explicit Linear request has no binding, perform read-only discovery and
+   produce an exact binding preview instead of borrowing a GitHub Project target.
 2. Read existing native initiatives, project properties, live Project statuses and categories, milestones, resources, issues, cycles, labels, assignees, estimates, dates, and relations to avoid duplicates.
 3. Interpret intent from the prompt:
    - `draft`, `propose`, `analyze`, or `preview` means read-only preview.

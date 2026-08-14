@@ -373,6 +373,26 @@ test("hook routes native planning, project updates, and legacy cleanup", async (
   assert.match(await run("Hãy audit và purge legacy comments"), /\$linear-reconcile.*exact validated preview/u);
 });
 
+test("hook arbitrates Linear and GitHub without dual-routing generic work", async () => {
+  const root = await mkdtemp(join(tmpdir(), "ldk-linear-router-"));
+  await writeFile(join(root, ".linear-project-ops.json"), JSON.stringify({ project: { linearProjectId: "project-hook", linearTeamId: "team-hook" } }));
+  await writeFile(join(root, ".github-project-ops.json"), JSON.stringify({ github: { owner: "example-org", projectNumber: 7 } }));
+  const hook = join(here, "..", "scripts", "hook-entry.mjs");
+  const run = (prompt) => runProcess(process.execPath, [hook, "UserPromptSubmit"], JSON.stringify({ cwd: root, prompt }));
+  const generic = await run("Hãy tạo issues cho roadmap");
+  assert.equal(generic, "");
+  assert.match(await run("Hãy tạo Linear issues cho roadmap"), /\$linear-create-work/u);
+  assert.equal(await run("Hãy tạo GitHub issues cho roadmap"), "");
+  assert.equal(await run("Đồng bộ Linear ABC-123 với GitHub example-org\/product#42"), "");
+});
+
+test("explicit Linear planning request bootstraps safely without a binding", async () => {
+  const root = await mkdtemp(join(tmpdir(), "ldk-linear-unbound-"));
+  const hook = join(here, "..", "scripts", "hook-entry.mjs");
+  const output = await runProcess(process.execPath, [hook, "UserPromptSubmit"], JSON.stringify({ cwd: root, prompt: "Tạo Linear issues cho roadmap" }));
+  assert.match(output, /binding="missing".*read-only Linear target discovery/su);
+});
+
 function runProcess(command, args, input) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { stdio: ["pipe", "pipe", "pipe"] });
