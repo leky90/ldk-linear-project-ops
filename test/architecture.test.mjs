@@ -33,6 +33,15 @@ test("plugin has four role-oriented public skills", async () => {
     await access(join(root, "skills", skill, "SKILL.md"));
     await access(join(root, "skills", skill, "agents", "openai.yaml"));
   }
+
+  const discoverableSkills = (await listSourceFiles(root))
+    .filter((path) => path.endsWith("/SKILL.md"))
+    .sort();
+  assert.equal(discoverableSkills.length, 4);
+  assert.deepEqual(
+    discoverableSkills.map((path) => path.slice(root.length + 1)),
+    skills.map((skill) => join("skills", skill, "SKILL.md")),
+  );
 });
 
 test("terminal issue runs require safe Git and worktree closure", async () => {
@@ -137,6 +146,45 @@ test("artifact routing keeps planning contracts separate from execution evidence
   assert.match(create, /timestamped execution history/u);
   assert.match(execute, /repository-native technical evidence/u);
   assert.match(reconcile, /append-only execution journal/u);
+});
+
+test("RoleFlow v4 skills and policies enforce goal-first multi-department execution", async () => {
+  const workPlanSchema = JSON.parse(await readFile(join(root, "schemas", "work-plan.schema.json"), "utf8"));
+  const handoffSchema = JSON.parse(await readFile(join(root, "schemas", "handoff.schema.json"), "utf8"));
+  assert.equal(workPlanSchema.properties.schemaVersion.const, 4);
+  assert.equal(handoffSchema.properties.schemaVersion.const, 2);
+
+  const create = await readFile(join(root, "skills", "linear-create-work", "SKILL.md"), "utf8");
+  const execute = await readFile(join(root, "skills", "linear-do-issue", "SKILL.md"), "utf8");
+  const status = await readFile(join(root, "skills", "linear-project-status", "SKILL.md"), "utf8");
+  const reconcile = await readFile(join(root, "skills", "linear-reconcile", "SKILL.md"), "utf8");
+  for (const skill of [create, execute, status, reconcile]) assert.match(skill, /work plan v4|handoff v2|RoleFlow v4/iu);
+
+  assert.match(create, /goal-structure/u);
+  assert.match(create, /must not create execution tasks/u);
+  assert.match(create, /urgent.*high.*normal.*low/su);
+  assert.match(execute, /claimed outcome/u);
+  assert.match(execute, /parallel waves/u);
+  assert.match(execute, /fresh-context reviewer subagent/u);
+  assert.match(execute, /stop at `In Review`/u);
+  assert.match(status, /normalizeProjectSnapshot|normalized snapshot/u);
+  assert.match(status, /policy-default/u);
+  assert.match(reconcile, /migrate-contract\.mjs/u);
+  assert.match(reconcile, /compare-and-swap|rollback conflict/u);
+
+  const decomposition = await readFile(join(root, "references", "decomposition-policy.md"), "utf8");
+  const profiles = await readFile(join(root, "references", "execution-profiles.md"), "utf8");
+  for (const department of ["product", "content", "marketing", "sales", "operations", "support", "legal", "finance", "software"]) {
+    assert.match(decomposition, new RegExp(`\\b${department}\\b`, "iu"));
+  }
+  assert.match(decomposition, /claim-time decomposition/u);
+  assert.match(profiles, /new-required/u);
+  assert.match(profiles, /exact resume prompt/u);
+
+  const software = await readFile(join(root, "references", "software-work.md"), "utf8");
+  assert.doesNotMatch(software, /unless the approved scope explicitly combines merge and release/iu);
+  const legacy = await readFile(join(root, "references", "legacy-compatibility.md"), "utf8");
+  assert.match(legacy, /write only work plan v4 and handoff v2/u);
 });
 
 test("source repository contains no live project binding or credentials", async () => {
