@@ -4,3 +4,6 @@ node_modules/
 .state/
 .env
 .DS_Store
+
+# Local session state
+.claude/
