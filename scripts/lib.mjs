@@ -581,7 +581,10 @@ function validateWorkPlanV4(plan, options) {
   }
 
   errors.push(...validatePlanningStructure(plan));
-  errors.push(...validateWorkPlan(compatibilityPlan, options));
+  // The compatibility pass is an internal structural check of the derived v3
+  // shape; forApply must not propagate or every canonical v4 apply would be
+  // rejected with a demand to migrate to v4.
+  errors.push(...validateWorkPlan(compatibilityPlan, { ...options, forApply: false }));
   return [...new Set(errors)];
 }
 

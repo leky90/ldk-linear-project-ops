@@ -142,3 +142,11 @@ test("inherited priority must match the direct parent", async () => {
 async function validPlan() {
   return JSON.parse(await readFile(join(root, "tests", "fixtures", "valid-work-plan-v4.json"), "utf8"));
 }
+
+test("a canonical v4 plan passes apply-mode validation", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const { validateWorkPlan } = await import("../scripts/lib.mjs");
+  const plan = JSON.parse(await readFile(new URL("../tests/fixtures/valid-work-plan-v4.json", import.meta.url), "utf8"));
+  plan.mode = "apply";
+  assert.deepEqual(validateWorkPlan(plan, { forApply: true }), [], "v4 is the canonical write contract; apply must not demand migration");
+});
