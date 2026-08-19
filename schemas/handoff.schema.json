@@ -1,19 +1,56 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://ldktech.dev/schemas/linear-role-handoff.schema.json",
+  "$id": "https://ldktech.dev/schemas/linear-role-handoff-v2.schema.json",
   "title": "Linear Role Handoff",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "kind", "type", "issueId", "fromRole", "summary", "checks", "evidence", "nextAction"],
+  "required": [
+    "schemaVersion",
+    "kind",
+    "type",
+    "issueId",
+    "fromRole",
+    "summary",
+    "observedAt",
+    "observedState",
+    "transition",
+    "checks",
+    "evidence",
+    "delivery",
+    "nextAction"
+  ],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "kind": { "const": "linear-role-handoff" },
-    "type": { "enum": ["handoff", "review", "blocked", "reconciliation"] },
+    "type": { "enum": ["handoff", "review", "delivery", "verification", "blocked", "reconciliation"] },
     "issueId": { "type": "string", "minLength": 1 },
     "fromRole": { "$ref": "#/$defs/role" },
     "toRole": { "$ref": "#/$defs/role" },
     "summary": { "type": "string", "minLength": 1 },
-    "deliverables": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "observedAt": { "$ref": "#/$defs/timestamp" },
+    "observedState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["issueUpdatedAt", "status", "logicalState"],
+      "properties": {
+        "issueUpdatedAt": { "$ref": "#/$defs/timestamp" },
+        "status": { "type": "string", "minLength": 1 },
+        "logicalState": { "$ref": "#/$defs/logicalState" }
+      }
+    },
+    "transition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "$ref": "#/$defs/logicalState" },
+        "to": { "$ref": "#/$defs/logicalState" }
+      }
+    },
+    "deliverables": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
     "checks": {
       "type": "array",
       "items": {
@@ -31,10 +68,12 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["label", "value"],
+        "required": ["kind", "label", "value", "visibility"],
         "properties": {
+          "kind": { "enum": ["url", "linear-resource", "commit", "text", "local-note", "local-file", "validator", "report"] },
           "label": { "type": "string", "minLength": 1 },
-          "value": { "type": "string", "minLength": 1 }
+          "value": { "type": "string", "minLength": 1 },
+          "visibility": { "enum": ["shared", "local"] }
         }
       }
     },
@@ -47,7 +86,25 @@
       "required": ["decision", "findings"],
       "properties": {
         "decision": { "enum": ["passed", "changes-requested"] },
-        "findings": { "type": "array", "items": { "type": "string" } }
+        "findings": { "type": "array", "items": { "type": "string" } },
+        "independence": { "enum": ["fresh-session", "fresh-subagent", "external-reviewer"] }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["decision"],
+            "properties": { "decision": { "const": "passed" } }
+          },
+          "then": { "required": ["independence"] }
+        }
+      ]
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision"],
+      "properties": {
+        "decision": { "enum": ["passed", "failed"] }
       }
     },
     "blocker": {
@@ -59,6 +116,17 @@
         "impact": { "type": "string", "minLength": 1 },
         "neededFrom": { "type": "string", "minLength": 1 },
         "resumeWhen": { "type": "string", "minLength": 1 }
+      }
+    },
+    "nextExecution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sessionPolicy", "modelClass", "effort", "reason"],
+      "properties": {
+        "sessionPolicy": { "enum": ["reuse", "new-preferred", "new-required"] },
+        "modelClass": { "enum": ["fast", "standard", "reasoning"] },
+        "effort": { "enum": ["low", "medium", "high"] },
+        "reason": { "type": "string", "minLength": 1 }
       }
     },
     "software": {
@@ -79,7 +147,9 @@
             "baselineId": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
             "changeBaseSha": { "type": "string", "pattern": "^[0-9a-fA-F]{7,64}$" },
             "scopePaths": {
-              "type": "array", "minItems": 1, "uniqueItems": true,
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
               "items": { "type": "string", "minLength": 1 }
             }
           }
@@ -89,32 +159,43 @@
   },
   "$defs": {
     "role": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "logicalState": {
+      "enum": ["refinement", "ready", "in-progress", "in-review", "ready-to-deliver", "delivery-verification", "blocked", "done", "canceled"]
+    },
+    "deliveryMode": {
+      "enum": ["decision", "artifact-review", "publish", "external-action", "software-merge", "production-release", "operations-change"]
+    },
+    "deliveryCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "check"],
+      "properties": {
+        "mode": { "$ref": "#/$defs/deliveryMode" },
+        "check": { "type": "string", "minLength": 1 },
+        "passed": { "type": "boolean" }
+      }
+    },
     "delivery": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mode", "phase"],
+      "required": ["mode", "ownerRole", "phase", "checks"],
       "properties": {
-        "mode": {
-          "enum": [
-            "decision",
-            "artifact-review",
-            "publish",
-            "external-action",
-            "software-merge",
-            "production-release",
-            "operations-change"
-          ]
-        },
-        "phase": {
-          "enum": ["review", "ready-to-deliver", "delivery-verification", "complete"]
-        },
-        "target": { "type": "string", "minLength": 1 }
+        "mode": { "$ref": "#/$defs/deliveryMode" },
+        "ownerRole": { "$ref": "#/$defs/role" },
+        "phase": { "enum": ["review", "ready-to-deliver", "delivery-verification", "complete"] },
+        "target": { "type": "string", "minLength": 1 },
+        "checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/deliveryCheck" }
+        }
       }
     }
   },
   "allOf": [
     {
-      "if": { "properties": { "type": { "const": "handoff" } } },
+      "if": { "required": ["type"], "properties": { "type": { "const": "handoff" } } },
       "then": {
         "required": ["toRole", "deliverables"],
         "properties": {
@@ -125,7 +206,7 @@
       }
     },
     {
-      "if": { "properties": { "type": { "const": "review" } } },
+      "if": { "required": ["type"], "properties": { "type": { "const": "review" } } },
       "then": {
         "required": ["review"],
         "properties": {
@@ -135,7 +216,26 @@
       }
     },
     {
-      "if": { "properties": { "type": { "const": "blocked" } } },
+      "if": { "required": ["type"], "properties": { "type": { "const": "verification" } } },
+      "then": {
+        "required": ["verification"],
+        "properties": {
+          "checks": { "minItems": 1 },
+          "evidence": {
+            "minItems": 1,
+            "contains": {
+              "required": ["kind", "visibility"],
+              "properties": {
+                "kind": { "enum": ["url", "linear-resource", "commit", "text"] },
+                "visibility": { "const": "shared" }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "required": ["type"], "properties": { "type": { "const": "blocked" } } },
       "then": { "required": ["blocker"] }
     }
   ]

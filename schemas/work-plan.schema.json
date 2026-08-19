@@ -1,17 +1,20 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://ldktech.dev/schemas/linear-role-work-plan-v3.schema.json",
+  "$id": "https://ldktech.dev/schemas/linear-role-work-plan-v4.schema.json",
   "title": "Linear RoleFlow Work Plan",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "kind", "mode", "project", "summary", "initiatives", "milestones", "resources", "issues"],
+  "required": ["schemaVersion", "kind", "mode", "planningStage", "project", "summary", "initiatives", "milestones", "resources", "issues"],
   "properties": {
-    "schemaVersion": { "const": 3 },
+    "schemaVersion": { "const": 4 },
     "kind": { "const": "linear-role-work-plan" },
     "mode": { "enum": ["preview", "apply"] },
+    "planningStage": { "enum": ["goal-structure", "outcome-decomposition"] },
+    "sourceOutcomeKey": { "$ref": "#/$defs/key" },
     "summary": { "type": "string", "minLength": 1 },
     "project": { "$ref": "#/$defs/project" },
     "initiatives": { "type": "array", "items": { "$ref": "#/$defs/initiative" } },
+    "phases": { "type": "array", "items": { "$ref": "#/$defs/phase" } },
     "milestones": { "type": "array", "items": { "$ref": "#/$defs/milestone" } },
     "resources": { "type": "array", "items": { "$ref": "#/$defs/resource" } },
     "issues": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/issue" } }
@@ -20,7 +23,7 @@
     "key": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{2,95}$" },
     "role": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
     "date": { "type": "string", "format": "date" },
-    "priority": { "enum": ["urgent", "high", "normal", "low", "none"] },
+    "priority": { "enum": ["urgent", "high", "normal", "low"] },
     "project": {
       "type": "object",
       "additionalProperties": false,
@@ -63,6 +66,7 @@
         "mode": { "enum": ["bounded", "continuous"] },
         "completionCriteria": {
           "type": "array",
+          "minItems": 1,
           "uniqueItems": true,
           "items": { "type": "string", "minLength": 1 }
         }
@@ -84,6 +88,33 @@
         "targetDate": { "$ref": "#/$defs/date" },
         "labels": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
         "resourceKeys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/key" } }
+      }
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "order", "objective", "entryCriteria", "exitCriteria", "milestoneKeys"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "order": { "type": "integer", "minimum": 1 },
+        "objective": { "type": "string", "minLength": 1 },
+        "entryCriteria": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "exitCriteria": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "milestoneKeys": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/key" }
+        }
       }
     },
     "milestone": {
@@ -165,14 +196,41 @@
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "type": "string", "minLength": 1 }
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["mode", "check"],
+            "properties": {
+              "mode": {
+                "enum": [
+                  "decision",
+                  "artifact-review",
+                  "publish",
+                  "external-action",
+                  "software-merge",
+                  "production-release",
+                  "operations-change"
+                ]
+              },
+              "check": { "type": "string", "minLength": 1 }
+            }
+          }
         }
-      }
+      },
+      "allOf": [
+        { "if": { "properties": { "mode": { "const": "decision" } } }, "then": { "properties": { "verification": { "items": { "properties": { "mode": { "const": "decision" } } } } } } },
+        { "if": { "properties": { "mode": { "const": "artifact-review" } } }, "then": { "properties": { "verification": { "items": { "properties": { "mode": { "const": "artifact-review" } } } } } } },
+        { "if": { "properties": { "mode": { "const": "publish" } } }, "then": { "properties": { "verification": { "items": { "properties": { "mode": { "const": "publish" } } } } } } },
+        { "if": { "properties": { "mode": { "const": "external-action" } } }, "then": { "properties": { "verification": { "items": { "properties": { "mode": { "const": "external-action" } } } } } } },
+        { "if": { "properties": { "mode": { "const": "software-merge" } } }, "then": { "properties": { "verification": { "items": { "properties": { "mode": { "const": "software-merge" } } } } } } },
+        { "if": { "properties": { "mode": { "const": "production-release" } } }, "then": { "properties": { "verification": { "items": { "properties": { "mode": { "const": "production-release" } } } } } } },
+        { "if": { "properties": { "mode": { "const": "operations-change" } } }, "then": { "properties": { "verification": { "items": { "properties": { "mode": { "const": "operations-change" } } } } } } }
+      ]
     },
     "issue": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["key", "type", "title", "outcome", "deliverable", "delivery", "status", "priority", "ownerRole", "definitionOfReady", "definitionOfDone", "resourceKeys", "relations"],
+      "required": ["key", "type", "title", "outcome", "deliverable", "delivery", "status", "priority", "prioritySource", "ownerRole", "definitionOfReady", "definitionOfDone", "resourceKeys", "relations"],
       "properties": {
         "key": { "$ref": "#/$defs/key" },
         "linearId": { "type": "string", "minLength": 1 },
@@ -185,9 +243,11 @@
         "delivery": { "$ref": "#/$defs/delivery" },
         "status": { "enum": ["Refinement", "Ready", "Blocked"] },
         "priority": { "$ref": "#/$defs/priority" },
+        "prioritySource": { "enum": ["explicit", "inherited", "policy-default"] },
         "ownerRole": { "$ref": "#/$defs/role" },
         "reviewerRole": { "$ref": "#/$defs/role" },
         "assigneeId": { "type": "string", "minLength": 1 },
+        "phaseKey": { "$ref": "#/$defs/key" },
         "milestoneKey": { "$ref": "#/$defs/key" },
         "cycleId": { "type": "string", "minLength": 1 },
         "estimate": { "type": "number", "minimum": 0 },
@@ -200,6 +260,29 @@
         "relations": { "$ref": "#/$defs/relations" }
       },
       "allOf": [
+        {
+          "if": {
+            "required": ["prioritySource"],
+            "properties": { "prioritySource": { "const": "policy-default" } }
+          },
+          "then": {
+            "properties": { "priority": { "const": "normal" } }
+          }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "task" } }
+          },
+          "then": { "required": ["parentKey"] }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "outcome" } }
+          },
+          "then": { "not": { "required": ["parentKey"] } }
+        },
         {
           "if": {
             "required": ["type"],
@@ -247,5 +330,43 @@
         }
       ]
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["mode"],
+        "properties": { "mode": { "const": "apply" } }
+      },
+      "then": {
+        "properties": {
+          "project": { "required": ["projectStatus"] }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["planningStage"],
+        "properties": { "planningStage": { "const": "goal-structure" } }
+      },
+      "then": {
+        "properties": {
+          "issues": {
+            "items": {
+              "not": {
+                "required": ["type"],
+                "properties": { "type": { "const": "task" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["planningStage"],
+        "properties": { "planningStage": { "const": "outcome-decomposition" } }
+      },
+      "then": { "required": ["sourceOutcomeKey"] }
+    }
+  ]
 }

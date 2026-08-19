@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 2,
+  "kind": "linear-role-handoff",
+  "type": "review",
+  "issueId": "EXAMPLE-123",
+  "fromRole": "marketing-lead",
+  "toRole": "marketing-lead",
+  "summary": "The synthetic launch package passed independent review.",
+  "observedAt": "2026-08-18T10:02:00.000Z",
+  "observedState": {
+    "issueUpdatedAt": "2026-08-18T10:01:00.000Z",
+    "status": "In Review",
+    "logicalState": "in-review"
+  },
+  "transition": {
+    "from": "in-review",
+    "to": "ready-to-deliver"
+  },
+  "checks": [
+    {
+      "item": "The launch package satisfies the issue Definition of Done",
+      "passed": true
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "url",
+      "label": "Accepted launch package",
+      "value": "https://example.invalid/launch-package",
+      "visibility": "shared"
+    },
+    {
+      "kind": "local-note",
+      "label": "Private reviewer notes",
+      "value": "private reviewer reasoning",
+      "visibility": "local"
+    }
+  ],
+  "knownLimitations": ["The public launch still requires explicit authorization."],
+  "delivery": {
+    "mode": "publish",
+    "ownerRole": "marketing-lead",
+    "phase": "ready-to-deliver",
+    "target": "synthetic public channel",
+    "checks": [
+      {
+        "mode": "publish",
+        "check": "The approved launch is live at the declared target"
+      }
+    ]
+  },
+  "review": {
+    "decision": "passed",
+    "findings": [],
+    "independence": "fresh-session"
+  },
+  "nextExecution": {
+    "sessionPolicy": "new-preferred",
+    "modelClass": "standard",
+    "effort": "medium",
+    "reason": "Use a fresh delivery context for the authorized publish step."
+  },
+  "nextAction": "Obtain publish authority, then perform the declared delivery action."
+}

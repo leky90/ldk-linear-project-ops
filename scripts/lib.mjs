@@ -1,6 +1,16 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
+import {
+  DELIVERY_MODES,
+  DELIVERY_PHASES,
+  validateDeliveryVerification,
+  validateHandoffTransition,
+} from "./delivery-lifecycle.mjs";
+import { validatePlanningStructure } from "./work-structure.mjs";
+
+export { DELIVERY_MODES, DELIVERY_PHASES } from "./delivery-lifecycle.mjs";
+
 const KEY_PATTERN = /^[a-z0-9][a-z0-9._:-]{2,95}$/u;
 const ROLE_PATTERN = /^[a-z0-9][a-z0-9-]*$/u;
 const SECRET_KEY_PATTERN = /(?:api[_-]?key|access[_-]?token|secret|password|private[_-]?key|credential|authorization)/iu;
@@ -10,6 +20,28 @@ const SECRET_VALUE_PATTERNS = [
   /\bgh[opusr]_[A-Za-z0-9_]{20,}\b/u,
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/u,
 ];
+
+function containsLocalEvidence(value) {
+  if (typeof value !== "string") return false;
+  const text = value.trim();
+  if (/file:/iu.test(text)) return true;
+  if (/(?:^|[\s([{\x22'\x60])(?:[A-Za-z0-9_.-]+\/)+[A-Za-z0-9_.-]+\.[A-Za-z0-9]{1,12}(?::\d+)?(?:$|[\s)\]}\x22'\x60])/u.test(text)) return true;
+  if (/(?:^|[\s([{\x22'\x60])\b(?:assets|docs|evals|examples|references|schemas|scripts|skills|test|tests|packages|src|app|lib|\.claude-plugin|\.codex-plugin)\//u.test(text)) return true;
+  return /(?:^|[\s([{"'`])(?:\/(?:Users|home|tmp|private|var\/folders)(?:\/|\b)|[A-Za-z]:\\|\.{0,2}\/|(?:docs|tests|src|app|lib|\.delivery|\.linear-ops)\/)/u.test(text);
+}
+
+function containsHiddenCoordinationDetail(value) {
+  if (typeof value !== "string") return false;
+  const sessionId = /(?:\bses_[A-Za-z0-9_-]+\b|\bsession[ _-]?id\b|\b(?:review\s+)?session\s+(?=[A-Za-z0-9_-]*[0-9])[A-Za-z0-9][A-Za-z0-9_-]{2,}\b|\bsession\s+[0-9a-f]{8}-[0-9a-f-]{27,}\b)/iu;
+  const modelId = /(?:\bmodel[ _-]?id\b|\b(?:openai|anthropic|google|xai|mistral|meta)\/[A-Za-z0-9._-]+\b|\b(?:o[1-9][0-9]?|gpt-[A-Za-z0-9._-]+|claude-[A-Za-z0-9._-]+|gemini-[A-Za-z0-9._-]+)\b|\b(?:sonnet|opus|haiku)\s*[0-9][A-Za-z0-9.-]*\b)/iu;
+  const promptPayload = /(?:\b(?:reviewer|system|user|assistant|resume|raw)[ _-]?prompt\b|\bprompt\s*(?::|=)\s*(?:hidden|internal|system|user|assistant|reveal))/iu;
+  const coordination = /(?:\brun[ _-]?id\b|\b(?:claim|lease|lock)[ _-]?token\b|\bheartbeat\b|\bbaselineId\b|\braw (?:handoff|validator) JSON\b)/iu;
+  return sessionId.test(value) || modelId.test(value) || promptPayload.test(value) || coordination.test(value);
+}
+
+function isCommentSafe(value) {
+  return !containsLocalEvidence(value) && !containsHiddenCoordinationDetail(value);
+}
 
 export const DEFAULT_ROLES = Object.freeze({
   cpo: { label: "role:cpo", defaultReviewer: "tech-lead" },
@@ -23,39 +55,6 @@ export const DEFAULT_ROLES = Object.freeze({
   marketer: { label: "role:marketer", defaultReviewer: "marketing-lead" },
   "sales-manager": { label: "role:sales-manager", defaultReviewer: "cpo" },
   "sales-representative": { label: "role:sales-representative", defaultReviewer: "sales-manager" },
-});
-
-export const DELIVERY_MODES = Object.freeze([
-  "decision",
-  "artifact-review",
-  "publish",
-  "external-action",
-  "software-merge",
-  "production-release",
-  "operations-change",
-]);
-
-export const DELIVERY_PHASES = Object.freeze([
-  "review",
-  "ready-to-deliver",
-  "delivery-verification",
-  "complete",
-]);
-
-const TERMINAL_DELIVERY_PATTERNS = Object.freeze({
-  "software-merge": [
-    /\b(?:pull request|PR)\b.*\bmerge(?:d)?\b/iu,
-    /\bmerge(?:d)?\b.*\b(?:main|integration branch|pull request|PR)\b/iu,
-  ],
-  "production-release": [
-    /\bproduction\s+(?:deploy(?:ment|ed)?|release|rollout|smoke)\b/iu,
-    /\bdeploy(?:ed|ment)?\s+(?:to\s+)?production\b/iu,
-    /\bpublic\s+rollout\b/iu,
-  ],
-  "operations-change": [
-    /\bHSTS\b.*\b(?:edge|final public|readback|response|rule|ruleset)\b/iu,
-    /\b(?:apply|create|update|change|verify|readback)\b.*\b(?:Cloudflare.*(?:rule|ruleset)|DNS|WAF|edge configuration|HSTS)\b/iu,
-  ],
 });
 
 export async function readJson(path) {
@@ -116,6 +115,13 @@ export function findSecretPaths(value, path = "$", matches = []) {
 
 function requiredString(value, location, errors) {
   if (typeof value !== "string" || !value.trim()) errors.push(`${location} is required`);
+}
+
+function rejectUnknownProperties(value, allowed, location, errors) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return;
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key)) errors.push(`${location}.${key} is an unexpected additional property`);
+  }
 }
 
 function validateRole(role, location, roles, errors, { optional = false } = {}) {
@@ -225,10 +231,16 @@ export function detectCycles(keys, dependencies) {
 }
 
 export function validateWorkPlan(plan, { projectId, teamId, forApply = false, roles = DEFAULT_ROLES } = {}) {
-  if (plan?.schemaVersion === 1) return validateLegacyWorkPlan(plan, { projectId, teamId, forApply, roles });
+  if (plan?.schemaVersion === 1) {
+    const errors = validateLegacyWorkPlan(plan, { projectId, teamId, forApply, roles });
+    if (forApply) errors.push("migration to work plan v4 is required before apply");
+    return [...new Set(errors)];
+  }
+  if (plan?.schemaVersion === 4) return validateWorkPlanV4(plan, { projectId, teamId, forApply, roles });
   const errors = [];
   if (!plan || typeof plan !== "object" || Array.isArray(plan)) return ["plan must be an object"];
   if (![2, 3].includes(plan.schemaVersion)) errors.push("schemaVersion must be 2 or 3");
+  if (forApply && [2, 3].includes(plan.schemaVersion)) errors.push("migration to work plan v4 is required before apply");
   if (plan.kind !== "linear-role-work-plan") errors.push("kind must be linear-role-work-plan");
   if (!new Set(["preview", "apply"]).has(plan.mode)) errors.push("mode must be preview or apply");
   if (forApply && plan.mode !== "apply") errors.push("mode must be apply for mutations");
@@ -238,6 +250,10 @@ export function validateWorkPlan(plan, { projectId, teamId, forApply = false, ro
   if (!project || typeof project !== "object" || Array.isArray(project)) {
     errors.push("project must be an object");
   } else {
+    rejectUnknownProperties(project, new Set([
+      "id", "teamIds", "name", "summary", "description", "status", "projectStatus",
+      "lifecycle", "priority", "leadId", "memberIds", "startDate", "targetDate", "initiativeKeys",
+    ]), "project", errors);
     requiredString(project.id, "project.id", errors);
     validateStringArray(project.teamIds, "project.teamIds", errors, { nonEmpty: true });
     if (projectId && project.id !== projectId) errors.push(`project.id ${project.id} does not match bound project ${projectId}`);
@@ -344,16 +360,6 @@ export function validateWorkPlan(plan, { projectId, teamId, forApply = false, ro
         if (item.delivery.target !== undefined) requiredString(item.delivery.target, `${at}.delivery.target`, errors);
         validateStringArray(item.delivery.verification, `${at}.delivery.verification`, errors, { nonEmpty: true });
         if (item.type === "decision" && item.delivery.mode !== "decision") errors.push(`${at}.decision requires delivery.mode decision`);
-        if (Array.isArray(item.delivery.verification) && DELIVERY_MODES.includes(item.delivery.mode)) {
-          const conflictingModes = Object.entries(TERMINAL_DELIVERY_PATTERNS)
-            .filter(([mode, patterns]) => mode !== item.delivery.mode
-              && item.delivery.verification.some((check) => typeof check === "string"
-                && patterns.some((pattern) => pattern.test(check))))
-            .map(([mode]) => mode);
-          if (conflictingModes.length) {
-            errors.push(`${at} has a mixed terminal delivery boundary: ${item.delivery.mode} verification also requires ${conflictingModes.join(", ")}; split independently authorized terminal actions into separate issues`);
-          }
-        }
       }
     }
     if (!new Set(["Refinement", "Ready", "Blocked"]).has(item.status)) errors.push(`${at}.status is invalid`);
@@ -420,6 +426,133 @@ export function validateWorkPlan(plan, { projectId, teamId, forApply = false, ro
   for (const cycle of detectCycles(issueKeys, dependencies)) errors.push(`dependency cycle: ${cycle.join(" -> ")}`);
   const secretPaths = findSecretPaths(plan);
   if (secretPaths.length) errors.push(`secret-like data is forbidden at: ${[...new Set(secretPaths)].join(", ")}`);
+  return [...new Set(errors)];
+}
+
+function validateWorkPlanV4(plan, options) {
+  const errors = [];
+  const allowedPriorities = new Set(["urgent", "high", "normal", "low"]);
+  const compatibilityPlan = structuredClone(plan);
+  compatibilityPlan.schemaVersion = 3;
+  delete compatibilityPlan.planningStage;
+  delete compatibilityPlan.sourceOutcomeKey;
+  delete compatibilityPlan.phases;
+
+  rejectUnknownProperties(plan, new Set([
+    "schemaVersion", "kind", "mode", "planningStage", "sourceOutcomeKey", "summary",
+    "project", "initiatives", "phases", "milestones", "resources", "issues",
+  ]), "plan", errors);
+  rejectUnknownProperties(plan.project, new Set([
+    "id", "teamIds", "name", "summary", "description", "status", "projectStatus",
+    "lifecycle", "priority", "leadId", "memberIds", "startDate", "targetDate", "initiativeKeys",
+  ]), "project", errors);
+  rejectUnknownProperties(plan.project?.projectStatus, new Set(["id", "name", "category"]), "project.projectStatus", errors);
+  rejectUnknownProperties(plan.project?.lifecycle, new Set(["mode", "completionCriteria"]), "project.lifecycle", errors);
+
+  if ((options.forApply || plan.mode === "apply") && plan.project?.projectStatus === undefined) errors.push("project.projectStatus is required for apply plans");
+  if (plan.project?.lifecycle !== undefined && (!Array.isArray(plan.project.lifecycle.completionCriteria) || plan.project.lifecycle.completionCriteria.length === 0)) {
+    errors.push("project.lifecycle.completionCriteria must be non-empty");
+  }
+  if (plan.project?.priority !== undefined && !allowedPriorities.has(plan.project.priority)) errors.push("project.priority is invalid");
+
+  const initiatives = Array.isArray(plan.initiatives) ? plan.initiatives : [];
+  initiatives.forEach((item, index) => {
+    rejectUnknownProperties(item, new Set([
+      "key", "linearId", "name", "objective", "description", "status", "priority", "ownerId",
+      "targetDate", "labels", "resourceKeys",
+    ]), `initiatives[${index}]`, errors);
+    if (!allowedPriorities.has(item?.priority)) errors.push(`initiatives[${index}].priority is invalid`);
+  });
+
+  const milestones = Array.isArray(plan.milestones) ? plan.milestones : [];
+  const milestoneKeys = new Set(milestones.map((item) => item?.key));
+  milestones.forEach((item, index) => rejectUnknownProperties(
+    item,
+    new Set(["key", "linearId", "name", "description", "targetDate"]),
+    `milestones[${index}]`,
+    errors,
+  ));
+
+  const resources = Array.isArray(plan.resources) ? plan.resources : [];
+  resources.forEach((item, index) => rejectUnknownProperties(
+    item,
+    new Set(["key", "title", "type", "url", "content"]),
+    `resources[${index}]`,
+    errors,
+  ));
+
+  const phases = Array.isArray(plan.phases) ? plan.phases : [];
+  if (plan.phases !== undefined && !Array.isArray(plan.phases)) errors.push("phases must be an array");
+  const phaseKeys = new Set();
+  const phaseOrders = new Set();
+  phases.forEach((phase, index) => {
+    const at = `phases[${index}]`;
+    rejectUnknownProperties(phase, new Set([
+      "key", "order", "objective", "entryCriteria", "exitCriteria", "milestoneKeys",
+    ]), at, errors);
+    if (typeof phase?.key !== "string" || !KEY_PATTERN.test(phase.key)) errors.push(`${at}.key is invalid`);
+    if (phaseKeys.has(phase?.key)) errors.push(`duplicate phase key: ${phase.key}`);
+    phaseKeys.add(phase?.key);
+    if (!Number.isInteger(phase?.order) || phase.order < 1) errors.push(`${at}.order must be a positive integer`);
+    if (phaseOrders.has(phase?.order)) errors.push(`duplicate phase order: ${phase.order}`);
+    phaseOrders.add(phase?.order);
+    requiredString(phase?.objective, `${at}.objective`, errors);
+    validateStringArray(phase?.entryCriteria, `${at}.entryCriteria`, errors, { nonEmpty: true });
+    validateStringArray(phase?.exitCriteria, `${at}.exitCriteria`, errors, { nonEmpty: true });
+    validateStringArray(phase?.milestoneKeys, `${at}.milestoneKeys`, errors);
+    for (const key of phase?.milestoneKeys ?? []) if (!milestoneKeys.has(key)) errors.push(`${at}.milestoneKeys references unknown milestone ${key}`);
+  });
+
+  const issues = Array.isArray(plan.issues) ? plan.issues : [];
+  const issueByKey = new Map(issues.map((issue) => [issue?.key, issue]));
+  issues.forEach((item, index) => {
+    const at = `issues[${index}]`;
+    rejectUnknownProperties(item, new Set([
+      "key", "linearId", "type", "parentKey", "title", "outcome", "context", "deliverable",
+      "delivery", "status", "priority", "ownerRole", "reviewerRole", "assigneeId", "phaseKey",
+      "prioritySource",
+      "milestoneKey", "cycleId", "estimate", "dueDate", "labels", "definitionOfReady",
+      "definitionOfDone", "resourceKeys", "externalBlocker", "relations",
+    ]), at, errors);
+    rejectUnknownProperties(item?.delivery, new Set(["mode", "ownerRole", "target", "verification"]), `${at}.delivery`, errors);
+    rejectUnknownProperties(item?.relations, new Set(["blockedByKeys", "relatedToKeys", "duplicateOfKey"]), `${at}.relations`, errors);
+    rejectUnknownProperties(item?.externalBlocker, new Set(["reason", "ownerRole", "resumeWhen"]), `${at}.externalBlocker`, errors);
+    if (item?.type === "task" && !item.parentKey) errors.push(`${at}.parentKey is required for task`);
+    if (item?.type === "outcome" && Object.hasOwn(item, "parentKey")) errors.push(`${at}.parentKey is forbidden for outcome`);
+    if (!allowedPriorities.has(item?.priority)) errors.push(`${at}.priority is invalid`);
+    if (!new Set(["explicit", "inherited", "policy-default"]).has(item?.prioritySource)) errors.push(`${at}.prioritySource is invalid`);
+    if (item?.prioritySource === "policy-default" && item?.priority !== "normal") errors.push(`${at}.prioritySource policy-default requires priority normal`);
+    if (item?.prioritySource === "inherited") {
+      const parent = issueByKey.get(item.parentKey);
+      if (!parent || parent.priority !== item.priority) errors.push(`${at}.prioritySource inherited requires the direct parent priority to match`);
+    }
+    if (item?.phaseKey !== undefined && !phaseKeys.has(item.phaseKey)) errors.push(`${at}.phaseKey references unknown phase ${item.phaseKey}`);
+
+    const checks = item?.delivery?.verification;
+    if (Array.isArray(checks)) {
+      checks.forEach((check, checkIndex) => rejectUnknownProperties(
+        check,
+        new Set(["mode", "check"]),
+        `${at}.delivery.verification[${checkIndex}]`,
+        errors,
+      ));
+      errors.push(...validateDeliveryVerification({ deliveryMode: item?.delivery?.mode, checks })
+        .map((error) => `${at}.${error}`));
+    } else {
+      errors.push(`${at}.delivery.verification must be an array of objects`);
+    }
+
+    if (compatibilityPlan.issues?.[index]?.delivery) {
+      compatibilityPlan.issues[index].delivery.verification = Array.isArray(checks)
+        ? checks.map((check) => typeof check?.check === "string" ? check.check : "")
+        : checks;
+    }
+    if (compatibilityPlan.issues?.[index]) delete compatibilityPlan.issues[index].phaseKey;
+    if (compatibilityPlan.issues?.[index]) delete compatibilityPlan.issues[index].prioritySource;
+  });
+
+  errors.push(...validatePlanningStructure(plan));
+  errors.push(...validateWorkPlan(compatibilityPlan, options));
   return [...new Set(errors)];
 }
 
@@ -585,6 +718,7 @@ export function validateLegacyCleanupPlan(plan, { projectId, forApply = false } 
 }
 
 export function validateHandoff(handoff, { roles = DEFAULT_ROLES } = {}) {
+  if (handoff?.schemaVersion === 2) return validateHandoffV2(handoff, { roles });
   const errors = [];
   if (!handoff || typeof handoff !== "object" || Array.isArray(handoff)) return ["handoff must be an object"];
   if (handoff.schemaVersion !== 1) errors.push("schemaVersion must be 1");
@@ -646,22 +780,231 @@ export function validateHandoff(handoff, { roles = DEFAULT_ROLES } = {}) {
   return [...new Set(errors)];
 }
 
+function validateHandoffV2(handoff, { roles }) {
+  const errors = [];
+  const eventTypes = new Set(["handoff", "review", "delivery", "verification", "blocked", "reconciliation"]);
+  const evidenceKinds = new Set(["url", "linear-resource", "commit", "text", "local-note", "local-file", "validator", "report"]);
+  const sharedEvidenceKinds = new Set(["url", "linear-resource", "commit", "text"]);
+
+  rejectUnknownProperties(handoff, new Set([
+    "schemaVersion", "kind", "type", "issueId", "fromRole", "toRole", "summary", "observedAt",
+    "observedState", "transition", "deliverables", "checks", "evidence", "knownLimitations",
+    "nextAction", "delivery", "review", "verification", "blocker", "software", "nextExecution",
+  ]), "handoff", errors);
+  if (handoff.kind !== "linear-role-handoff") errors.push("kind must be linear-role-handoff");
+  if (!eventTypes.has(handoff.type)) errors.push("type is invalid");
+  requiredString(handoff.issueId, "issueId", errors);
+  requiredString(handoff.summary, "summary", errors);
+  requiredString(handoff.nextAction, "nextAction", errors);
+  validateRole(handoff.fromRole, "fromRole", roles, errors);
+  validateRole(handoff.toRole, "toRole", roles, errors, { optional: true });
+  validateTimestamp(handoff.observedAt, "observedAt", errors);
+
+  rejectUnknownProperties(handoff.observedState, new Set(["issueUpdatedAt", "status", "logicalState"]), "observedState", errors);
+  if (!handoff.observedState || typeof handoff.observedState !== "object" || Array.isArray(handoff.observedState)) {
+    errors.push("observedState must be an object");
+  } else {
+    validateTimestamp(handoff.observedState.issueUpdatedAt, "observedState.issueUpdatedAt", errors);
+    requiredString(handoff.observedState.status, "observedState.status", errors);
+    requiredString(handoff.observedState.logicalState, "observedState.logicalState", errors);
+    if (Date.parse(handoff.observedAt) < Date.parse(handoff.observedState.issueUpdatedAt)) errors.push("observedAt cannot be before observedState.issueUpdatedAt");
+  }
+
+  rejectUnknownProperties(handoff.transition, new Set(["from", "to"]), "transition", errors);
+  if (!handoff.transition || typeof handoff.transition !== "object" || Array.isArray(handoff.transition)) {
+    errors.push("transition must be an object");
+  } else {
+    requiredString(handoff.transition.from, "transition.from", errors);
+    requiredString(handoff.transition.to, "transition.to", errors);
+    if (handoff.observedState?.logicalState !== handoff.transition.from) errors.push("observedState.logicalState must match transition.from");
+  }
+
+  if (!Array.isArray(handoff.checks)) errors.push("checks must be an array");
+  else handoff.checks.forEach((check, index) => {
+    rejectUnknownProperties(check, new Set(["item", "passed"]), `checks[${index}]`, errors);
+    requiredString(check?.item, `checks[${index}].item`, errors);
+    if (typeof check?.passed !== "boolean") errors.push(`checks[${index}].passed must be boolean`);
+  });
+
+  if (!Array.isArray(handoff.evidence)) errors.push("evidence must be an array");
+  else handoff.evidence.forEach((item, index) => {
+    const at = `evidence[${index}]`;
+    rejectUnknownProperties(item, new Set(["kind", "label", "value", "visibility"]), at, errors);
+    if (!evidenceKinds.has(item?.kind)) errors.push(`${at}.kind is invalid`);
+    requiredString(item?.label, `${at}.label`, errors);
+    requiredString(item?.value, `${at}.value`, errors);
+    if (!new Set(["shared", "local"]).has(item?.visibility)) errors.push(`${at}.visibility is invalid`);
+    if (item?.visibility === "shared" && (!sharedEvidenceKinds.has(item.kind) || containsLocalEvidence(item.value))) {
+      errors.push(`${at} shared evidence must not contain a local path or unsupported kind`);
+    }
+  });
+
+  if (!handoff.delivery || typeof handoff.delivery !== "object" || Array.isArray(handoff.delivery)) {
+    errors.push("delivery is required and must be an object");
+  } else {
+    rejectUnknownProperties(handoff.delivery, new Set(["mode", "ownerRole", "phase", "target", "checks"]), "delivery", errors);
+    if (!DELIVERY_MODES.includes(handoff.delivery.mode)) errors.push("delivery.mode is invalid");
+    validateRole(handoff.delivery.ownerRole, "delivery.ownerRole", roles, errors);
+    if (!DELIVERY_PHASES.includes(handoff.delivery.phase)) errors.push("delivery.phase is invalid");
+    if (handoff.delivery.target !== undefined) requiredString(handoff.delivery.target, "delivery.target", errors);
+    if (Array.isArray(handoff.delivery.checks)) {
+      handoff.delivery.checks.forEach((check, index) => rejectUnknownProperties(
+        check,
+        new Set(["mode", "check", "passed"]),
+        `delivery.checks[${index}]`,
+        errors,
+      ));
+      errors.push(...validateDeliveryVerification({ deliveryMode: handoff.delivery.mode, checks: handoff.delivery.checks }));
+    } else {
+      errors.push("delivery.checks must be a non-empty array");
+    }
+  }
+
+  if (handoff.nextExecution !== undefined) {
+    rejectUnknownProperties(handoff.nextExecution, new Set(["sessionPolicy", "modelClass", "effort", "reason"]), "nextExecution", errors);
+    if (!new Set(["reuse", "new-preferred", "new-required"]).has(handoff.nextExecution?.sessionPolicy)) errors.push("nextExecution.sessionPolicy is invalid");
+    if (!new Set(["fast", "standard", "reasoning"]).has(handoff.nextExecution?.modelClass)) errors.push("nextExecution.modelClass is invalid");
+    if (!new Set(["low", "medium", "high"]).has(handoff.nextExecution?.effort)) errors.push("nextExecution.effort is invalid");
+    requiredString(handoff.nextExecution?.reason, "nextExecution.reason", errors);
+  }
+
+  if (handoff.type === "handoff") {
+    validateRole(handoff.toRole, "toRole", roles, errors);
+    validateStringArray(handoff.deliverables, "deliverables", errors, { nonEmpty: true });
+    if (!Array.isArray(handoff.checks) || handoff.checks.length === 0) errors.push("handoff checks must include the Definition of Done");
+    if ((handoff.checks ?? []).some((check) => check?.passed !== true)) errors.push("all Definition of Done checks must pass before handoff");
+  }
+  if (handoff.type === "review") {
+    rejectUnknownProperties(handoff.review, new Set(["decision", "findings", "independence"]), "review", errors);
+    if (!new Set(["passed", "changes-requested"]).has(handoff.review?.decision)) errors.push("review.decision is invalid");
+    if (!Array.isArray(handoff.review?.findings)) errors.push("review.findings must be an array");
+    if (handoff.review?.decision === "passed" && !new Set(["fresh-session", "fresh-subagent", "external-reviewer"]).has(handoff.review?.independence)) errors.push("review.independence is required for a passed review");
+    if (handoff.review?.decision === "passed" && (handoff.checks ?? []).some((check) => check?.passed !== true)) errors.push("a passed review requires all checks to pass");
+    if (handoff.review?.decision === "changes-requested") validateRole(handoff.toRole, "toRole", roles, errors);
+  }
+  if (handoff.type === "verification") {
+    rejectUnknownProperties(handoff.verification, new Set(["decision"]), "verification", errors);
+    if (!new Set(["passed", "failed"]).has(handoff.verification?.decision)) errors.push("verification.decision is invalid");
+    if (handoff.verification?.decision === "passed" && handoff.transition?.to === "done") {
+      if (handoff.fromRole !== handoff.delivery?.ownerRole) errors.push("verification fromRole must match delivery.ownerRole");
+      if (!Array.isArray(handoff.checks) || handoff.checks.length === 0 || handoff.checks.some((check) => check?.passed !== true)) errors.push("terminal verification requires all declared checks to pass");
+      const sharedEvidence = (handoff.evidence ?? []).filter((item) => item?.visibility === "shared" && isCommentSafe(item.value));
+      if (sharedEvidence.length === 0) errors.push("terminal verification requires shared evidence");
+    }
+  }
+  if (handoff.type === "blocked") {
+    rejectUnknownProperties(handoff.blocker, new Set(["reason", "impact", "neededFrom", "resumeWhen"]), "blocker", errors);
+    for (const field of ["reason", "impact", "neededFrom", "resumeWhen"]) requiredString(handoff.blocker?.[field], `blocker.${field}`, errors);
+  }
+
+  if (handoff.delivery && handoff.transition) {
+    errors.push(...validateHandoffTransition({
+      type: handoff.type,
+      reviewDecision: handoff.review?.decision,
+      verificationDecision: handoff.verification?.decision,
+      deliveryMode: handoff.delivery.mode,
+      from: handoff.transition.from,
+      to: handoff.transition.to,
+      checks: handoff.delivery.checks,
+    }));
+    const expectedPhase = {
+      "in-review": "review",
+      "ready-to-deliver": "ready-to-deliver",
+      "delivery-verification": "delivery-verification",
+      done: "complete",
+    }[handoff.transition.to];
+    if (expectedPhase && handoff.delivery.phase !== expectedPhase) errors.push(`delivery.phase must be ${expectedPhase} for transition.to ${handoff.transition.to}`);
+  }
+
+  if (handoff.software !== undefined) validateSoftwareHandoff(handoff, roles, errors);
+  validateCommentSafety(handoff, errors);
+  const secretPaths = findSecretPaths(handoff);
+  if (secretPaths.length) errors.push(`secret-like data is forbidden at: ${[...new Set(secretPaths)].join(", ")}`);
+  return [...new Set(errors)];
+}
+
+export function validateHandoffAgainstIssue(handoff, issue) {
+  const errors = [];
+  if (handoff?.schemaVersion !== 2) return ["handoff v2 is required for live-state validation"];
+  if (!issue || typeof issue !== "object" || Array.isArray(issue)) return ["current issue snapshot is required"];
+  if (handoff.issueId !== issue.id) errors.push(`handoff issueId ${handoff.issueId} does not match current issue ${issue.id}`);
+  if (handoff.observedState?.issueUpdatedAt !== issue.updatedAt) errors.push("handoff observation is stale; issueUpdatedAt changed");
+  if (typeof issue.status !== "string" || handoff.observedState?.status !== issue.status) errors.push("handoff observed physical status does not match current issue status");
+  if (handoff.transition?.from !== issue.logicalState) errors.push("handoff transition.from does not match current logical state");
+  return [...new Set(errors)];
+}
+
+function validateCommentSafety(handoff, errors) {
+  const rendered = {
+    summary: handoff.summary,
+    deliverables: handoff.deliverables,
+    checks: (handoff.checks ?? []).map((check) => check?.item),
+    evidence: (handoff.evidence ?? []).filter((item) => item?.visibility === "shared").flatMap((item) => [item.label, item.value]),
+    knownLimitations: handoff.knownLimitations,
+    deliveryTarget: handoff.delivery?.target,
+    reviewFindings: handoff.review?.findings,
+    blocker: handoff.blocker,
+    nextAction: handoff.nextAction,
+  };
+  collectUnsafeCommentPaths(rendered, "", errors);
+}
+
+function collectUnsafeCommentPaths(value, path, errors) {
+  if (typeof value === "string") {
+    if (!isCommentSafe(value)) errors.push(`${path || "comment"} is not comment-safe: local paths and hidden coordination details are forbidden`);
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => collectUnsafeCommentPaths(item, `${path}[${index}]`, errors));
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  for (const [key, item] of Object.entries(value)) collectUnsafeCommentPaths(item, path ? `${path}.${key}` : key, errors);
+}
+
+function validateTimestamp(value, location, errors) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u.test(value) || Number.isNaN(Date.parse(value))) {
+    errors.push(`${location} must be a valid ISO timestamp with timezone`);
+  }
+}
+
+function validateSoftwareHandoff(handoff, roles, errors) {
+  if (!handoff.software || typeof handoff.software !== "object" || Array.isArray(handoff.software)) {
+    errors.push("software must be an object");
+    return;
+  }
+  if (handoff.type !== "handoff") errors.push("software evidence is only valid for a handoff");
+  rejectUnknownProperties(handoff.software, new Set(["commitSha", "branchName", "branchPushed", "pullRequestUrl", "ciStatus", "git"]), "software", errors);
+  rejectUnknownProperties(handoff.software.git, new Set(["baselineId", "changeBaseSha", "scopePaths"]), "software.git", errors);
+  if (handoff.fromRole !== "software-engineer") errors.push("software evidence requires fromRole software-engineer");
+  validateRole(handoff.fromRole, "fromRole", roles, errors);
+  if (typeof handoff.software.commitSha !== "string" || !/^[0-9a-f]{7,64}$/iu.test(handoff.software.commitSha)) errors.push("software.commitSha is invalid");
+  requiredString(handoff.software.branchName, "software.branchName", errors);
+  if (typeof handoff.software.git?.baselineId !== "string" || !/^[0-9a-f]{64}$/iu.test(handoff.software.git.baselineId)) errors.push("software.git.baselineId is invalid");
+  if (typeof handoff.software.git?.changeBaseSha !== "string" || !/^[0-9a-f]{7,64}$/iu.test(handoff.software.git.changeBaseSha)) errors.push("software.git.changeBaseSha is invalid");
+  validateStringArray(handoff.software.git?.scopePaths, "software.git.scopePaths", errors, { nonEmpty: true });
+}
+
 export function renderWorkComment(handoff, { roles = DEFAULT_ROLES } = {}) {
   const errors = validateHandoff(handoff, { roles });
   if (errors.length) throw new Error(`invalid handoff: ${errors.join("; ")}`);
   const role = (value) => value?.replaceAll("-", " ") ?? "—";
+  const commentText = (value, fallback = "Local-only detail omitted.") => isCommentSafe(value) ? value : fallback;
   const compactBullets = (items, { fallback = "- Không có.", limit = 3, overflowLabel = "mục" } = {}) => {
     if (!items?.length) return [fallback];
-    const visible = items.slice(0, limit).map((item) => `- ${item}`);
+    const visible = items.slice(0, limit).map((item) => `- ${commentText(item)}`);
     const hidden = items.length - visible.length;
     if (hidden > 0) visible.push(`- +${hidden} ${overflowLabel} khác được giữ trong artifact bền vững.`);
     return visible;
   };
-  const localOnlyEvidence = (value) => typeof value === "string" && /^(?:\/|[A-Za-z]:\\|\.{0,2}\/|(?:docs|tests|src|app|lib|\.delivery|\.linear-ops)\/)/u.test(value.trim());
-  const visibleEvidence = (handoff.evidence ?? []).filter((item) => !localOnlyEvidence(item.value));
+  const localOnlyEvidence = containsLocalEvidence;
+  const visibleEvidence = (handoff.evidence ?? []).filter((item) => {
+    if (handoff.schemaVersion === 2 && (item.visibility !== "shared" || !new Set(["url", "linear-resource", "commit", "text"]).has(item.kind))) return false;
+    return !localOnlyEvidence(item.value);
+  });
   const hiddenLocalEvidenceCount = (handoff.evidence ?? []).length - visibleEvidence.length;
   const evidence = visibleEvidence.length
-    ? visibleEvidence.slice(0, 3).map((item) => `- **${item.label}:** ${item.value}`)
+    ? visibleEvidence.slice(0, 3).map((item) => `- **${commentText(item.label)}:** ${commentText(item.value)}`)
     : ["- Không có bằng chứng truy cập được đính kèm."];
   if (visibleEvidence.length > 3) evidence.push(`- +${visibleEvidence.length - 3} bằng chứng khác được giữ trong artifact bền vững.`);
   if (hiddenLocalEvidenceCount > 0) evidence.push(`- ${hiddenLocalEvidenceCount} bằng chứng local-only được giữ ngoài Linear.`);
@@ -669,19 +1012,19 @@ export function renderWorkComment(handoff, { roles = DEFAULT_ROLES } = {}) {
   const checks = handoff.checks?.length
     ? [
         `- [${passedChecks === handoff.checks.length ? "x" : " "}] ${passedChecks}/${handoff.checks.length} checks passed.`,
-        ...handoff.checks.filter((item) => !item.passed).slice(0, 3).map((item) => `- [ ] ${item.item}`),
+        ...handoff.checks.filter((item) => !item.passed).slice(0, 3).map((item) => `- [ ] ${commentText(item.item)}`),
       ]
     : ["- Không có kiểm tra được khai báo."];
   const delivery = handoff.delivery ? [
     "", "## Delivery", "",
     `- **Mode:** ${handoff.delivery.mode}`,
     `- **Phase:** ${handoff.delivery.phase}`,
-    ...(handoff.delivery.target ? [`- **Target:** ${handoff.delivery.target}`] : []),
+    ...(handoff.delivery.target ? [`- **Target:** ${commentText(handoff.delivery.target)}`] : []),
   ] : [];
-  const next = ["", "## Bước tiếp theo", "", handoff.nextAction];
+  const next = ["", "## Bước tiếp theo", "", commentText(handoff.nextAction)];
   if (handoff.type === "handoff") return [
     `## ✅ Bàn giao · ${role(handoff.fromRole)} → ${role(handoff.toRole)}`,
-    "", "## Kết quả", "", handoff.summary,
+    "", "## Kết quả", "", commentText(handoff.summary),
     "", "## Sản phẩm bàn giao", "", ...compactBullets(handoff.deliverables, { overflowLabel: "sản phẩm bàn giao" }),
     "", "## Kiểm tra DoD", "", ...checks,
     "", "## Bằng chứng", "", ...evidence,
@@ -691,9 +1034,13 @@ export function renderWorkComment(handoff, { roles = DEFAULT_ROLES } = {}) {
   ].join("\n");
   if (handoff.type === "review") {
     const passed = handoff.review.decision === "passed";
+    const independence = handoff.schemaVersion === 2 && passed
+      ? ["", "Independent review was recorded before this transition."]
+      : [];
     return [
       `## ${passed ? "✅ Review đạt" : "🔁 Yêu cầu chỉnh sửa"} · ${role(handoff.fromRole)}`,
-      "", "## Kết luận", "", handoff.summary,
+      "", "## Kết luận", "", commentText(handoff.summary),
+      ...independence,
       "", "## Kiểm tra DoD", "", ...checks,
       "", "## Phát hiện", "", ...compactBullets(handoff.review.findings, { limit: 5, overflowLabel: "phát hiện" }),
       "", "## Bằng chứng", "", ...evidence,
@@ -701,19 +1048,37 @@ export function renderWorkComment(handoff, { roles = DEFAULT_ROLES } = {}) {
       ...next, "",
     ].join("\n");
   }
+  if (handoff.type === "delivery") return [
+    `## Delivery performed · ${role(handoff.fromRole)}`,
+    "", "## Result", "", commentText(handoff.summary),
+    "", "## Evidence", "", ...evidence,
+    ...delivery,
+    ...next, "",
+  ].join("\n");
+  if (handoff.type === "verification") {
+    const passed = handoff.verification?.decision === "passed";
+    return [
+      `## Delivery verification ${passed ? "passed" : "failed"} · ${role(handoff.fromRole)}`,
+      "", "## Result", "", commentText(handoff.summary),
+      "", "## Terminal checks", "", ...checks,
+      "", "## Evidence", "", ...evidence,
+      ...delivery,
+      ...next, "",
+    ].join("\n");
+  }
   if (handoff.type === "blocked") return [
     `## ⛔ Bị chặn · ${role(handoff.fromRole)}`,
-    "", "## Tình trạng", "", handoff.summary,
-    "", "## Nguyên nhân", "", handoff.blocker.reason,
-    "", "## Ảnh hưởng", "", handoff.blocker.impact,
-    "", "## Cần từ", "", handoff.blocker.neededFrom,
-    "", "## Tiếp tục khi", "", handoff.blocker.resumeWhen,
+    "", "## Tình trạng", "", commentText(handoff.summary),
+    "", "## Nguyên nhân", "", commentText(handoff.blocker.reason),
+    "", "## Ảnh hưởng", "", commentText(handoff.blocker.impact),
+    "", "## Cần từ", "", commentText(handoff.blocker.neededFrom),
+    "", "## Tiếp tục khi", "", commentText(handoff.blocker.resumeWhen),
     ...delivery,
     ...next, "",
   ].join("\n");
   return [
     `## 🧭 Hòa giải · ${role(handoff.fromRole)}`,
-    "", "## Kết quả", "", handoff.summary,
+    "", "## Kết quả", "", commentText(handoff.summary),
     "", "## Bằng chứng", "", ...evidence,
     ...delivery,
     ...next, "",

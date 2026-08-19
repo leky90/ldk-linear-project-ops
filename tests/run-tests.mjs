@@ -59,7 +59,7 @@ test("v3 work plan enforces hierarchy, planning fields, references, and dependen
   assert.deepEqual(validateWorkPlan(plan, { projectId: "project-1", teamId: "team-1" }), []);
   assert.match(validateWorkPlan(plan, { forApply: true }).join("\n"), /mode must be apply/u);
   plan.mode = "apply";
-  assert.deepEqual(validateWorkPlan(plan, { projectId: "project-1", teamId: "team-1", forApply: true }), []);
+  assert.match(validateWorkPlan(plan, { projectId: "project-1", teamId: "team-1", forApply: true }).join("\n"), /migration.*v4.*required/u);
   plan.project.projectStatus.category = "paused";
   assert.match(validateWorkPlan(plan).join("\n"), /project\.projectStatus\.category is invalid/u);
   plan.project.projectStatus.category = "in-progress";
@@ -149,7 +149,7 @@ test("v3 delivery contracts validate mode, owner, verification, and decisions", 
   assert.match(validateWorkPlan(plan).join("\n"), /decision requires delivery\.mode decision/u);
 });
 
-test("v3 work plan rejects mixed terminal delivery boundaries", async () => {
+test("v3 work plan does not infer terminal delivery modes from prose", async () => {
   const plan = await readJson(fixture("valid-work-plan.json"));
   const task = plan.issues[1];
   task.delivery.mode = "software-merge";
@@ -157,7 +157,7 @@ test("v3 work plan rejects mixed terminal delivery boundaries", async () => {
     "Reviewed PR is merged into main",
     "Production smoke confirms HSTS on the final public edge response",
   ];
-  assert.match(validateWorkPlan(plan).join("\n"), /mixed terminal delivery boundary.*production-release.*operations-change/u);
+  assert.doesNotMatch(validateWorkPlan(plan).join("\n"), /mixed terminal delivery boundary/u);
 });
 
 test("native project updates require publish intent and render a management update", async () => {
@@ -334,7 +334,7 @@ test("project lifecycle flags Planned after delivery and recommends In Progress"
 
 test("continuous lifecycle stays In Progress when its queue is temporarily empty", async () => {
   const snapshot = await readJson(fixture("project-snapshot.json"));
-  snapshot.issues.forEach((issue) => { issue.status = "Done"; });
+  snapshot.issues.forEach((issue) => { issue.status = "Done"; issue.terminalVerified = true; });
   const lifecycle = analyzeProjectLifecycle(snapshot);
   assert.equal(lifecycle.code, "continuous-needs-outcome");
   assert.equal(lifecycle.recommendedCategory, "in-progress");

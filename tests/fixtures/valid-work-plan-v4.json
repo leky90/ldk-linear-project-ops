@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 4,
+  "kind": "linear-role-work-plan",
+  "mode": "preview",
+  "planningStage": "outcome-decomposition",
+  "sourceOutcomeKey": "demo.outcome.launch",
+  "summary": "Decompose a synthetic multi-department launch outcome.",
+  "project": {
+    "id": "project-1",
+    "teamIds": ["team-1"],
+    "name": "Example launch",
+    "projectStatus": {
+      "id": "project-status-in-progress",
+      "name": "In Progress",
+      "category": "in-progress"
+    },
+    "lifecycle": {
+      "mode": "bounded",
+      "completionCriteria": ["All declared launch outcomes have terminal evidence"]
+    },
+    "priority": "high",
+    "initiativeKeys": ["demo.strategy.launch"]
+  },
+  "initiatives": [
+    {
+      "key": "demo.strategy.launch",
+      "name": "Launch the example product",
+      "objective": "Validate a synthetic cross-functional launch.",
+      "status": "active",
+      "priority": "high",
+      "resourceKeys": ["demo.resource.brief"]
+    }
+  ],
+  "phases": [
+    {
+      "key": "demo.phase.preparation",
+      "order": 1,
+      "objective": "Prepare approved launch assets.",
+      "entryCriteria": ["Launch outcome is approved"],
+      "exitCriteria": ["Required assets are accepted"],
+      "milestoneKeys": ["demo.milestone.ready"]
+    },
+    {
+      "key": "demo.phase.launch",
+      "order": 2,
+      "objective": "Deliver and verify the launch.",
+      "entryCriteria": ["Launch assets are accepted"],
+      "exitCriteria": ["Launch evidence is verified"],
+      "milestoneKeys": ["demo.milestone.verified"]
+    }
+  ],
+  "milestones": [
+    {
+      "key": "demo.milestone.ready",
+      "name": "Launch assets ready",
+      "targetDate": "2026-09-01"
+    },
+    {
+      "key": "demo.milestone.verified",
+      "name": "Launch verified",
+      "targetDate": "2026-09-15"
+    }
+  ],
+  "resources": [
+    {
+      "key": "demo.resource.brief",
+      "title": "Synthetic launch brief",
+      "type": "document",
+      "content": "Synthetic requirements without production identifiers."
+    }
+  ],
+  "issues": [
+    {
+      "key": "demo.outcome.launch",
+      "type": "outcome",
+      "title": "Deliver the approved launch",
+      "outcome": "The example product is launched with verified evidence.",
+      "deliverable": "Accepted launch package.",
+      "delivery": {
+        "mode": "artifact-review",
+        "ownerRole": "cpo",
+        "verification": [
+          {
+            "mode": "artifact-review",
+            "check": "The canonical launch package is accepted"
+          }
+        ]
+      },
+      "status": "Ready",
+      "priority": "high",
+      "prioritySource": "explicit",
+      "ownerRole": "marketing-lead",
+      "reviewerRole": "cpo",
+      "phaseKey": "demo.phase.preparation",
+      "milestoneKey": "demo.milestone.ready",
+      "definitionOfReady": ["Launch brief is linked"],
+      "definitionOfDone": ["Child deliverables are independently reviewable"],
+      "resourceKeys": ["demo.resource.brief"],
+      "relations": {
+        "blockedByKeys": [],
+        "relatedToKeys": []
+      }
+    },
+    {
+      "key": "demo.task.content",
+      "type": "task",
+      "parentKey": "demo.outcome.launch",
+      "title": "Prepare launch content",
+      "outcome": "Approved content is ready for publication.",
+      "deliverable": "Reviewed launch content package.",
+      "delivery": {
+        "mode": "artifact-review",
+        "ownerRole": "content-director",
+        "verification": [
+          {
+            "mode": "artifact-review",
+            "check": "The content director accepts the canonical package"
+          }
+        ]
+      },
+      "status": "Ready",
+      "priority": "high",
+      "prioritySource": "explicit",
+      "ownerRole": "content-writer",
+      "reviewerRole": "content-director",
+      "phaseKey": "demo.phase.preparation",
+      "milestoneKey": "demo.milestone.ready",
+      "definitionOfReady": ["Positioning is approved"],
+      "definitionOfDone": ["Content package is reviewable"],
+      "resourceKeys": ["demo.resource.brief"],
+      "relations": {
+        "blockedByKeys": [],
+        "relatedToKeys": []
+      }
+    },
+    {
+      "key": "demo.task.campaign",
+      "type": "task",
+      "parentKey": "demo.outcome.launch",
+      "title": "Configure the launch campaign",
+      "outcome": "The approved campaign is ready to activate.",
+      "deliverable": "Reviewed campaign configuration.",
+      "delivery": {
+        "mode": "artifact-review",
+        "ownerRole": "marketing-lead",
+        "verification": [
+          {
+            "mode": "artifact-review",
+            "check": "The marketing lead accepts the campaign configuration"
+          }
+        ]
+      },
+      "status": "Ready",
+      "priority": "high",
+      "prioritySource": "explicit",
+      "ownerRole": "marketer",
+      "reviewerRole": "marketing-lead",
+      "phaseKey": "demo.phase.preparation",
+      "milestoneKey": "demo.milestone.ready",
+      "definitionOfReady": ["Channel plan is approved"],
+      "definitionOfDone": ["Campaign configuration is reviewable"],
+      "resourceKeys": ["demo.resource.brief"],
+      "relations": {
+        "blockedByKeys": [],
+        "relatedToKeys": []
+      }
+    },
+    {
+      "key": "demo.task.publish",
+      "type": "task",
+      "parentKey": "demo.outcome.launch",
+      "title": "Publish the launch",
+      "outcome": "The approved launch is live.",
+      "deliverable": "Live launch with verification evidence.",
+      "delivery": {
+        "mode": "publish",
+        "ownerRole": "marketing-lead",
+        "target": "synthetic public channel",
+        "verification": [
+          {
+            "mode": "publish",
+            "check": "The approved launch is live at the declared target"
+          }
+        ]
+      },
+      "status": "Refinement",
+      "priority": "high",
+      "prioritySource": "explicit",
+      "ownerRole": "marketing-lead",
+      "reviewerRole": "cpo",
+      "phaseKey": "demo.phase.launch",
+      "milestoneKey": "demo.milestone.verified",
+      "definitionOfReady": ["Content and campaign configuration are accepted"],
+      "definitionOfDone": ["Publication is ready for independent verification"],
+      "resourceKeys": ["demo.resource.brief"],
+      "relations": {
+        "blockedByKeys": ["demo.task.content", "demo.task.campaign"],
+        "relatedToKeys": []
+      }
+    }
+  ]
+}

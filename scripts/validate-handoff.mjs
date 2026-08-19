@@ -1,10 +1,16 @@
 #!/usr/bin/env node
-import { parseCli, readJson, validateHandoff, validateProjectBinding } from "./lib.mjs";
+import {
+  parseCli,
+  readJson,
+  validateHandoff,
+  validateHandoffAgainstIssue,
+  validateProjectBinding,
+} from "./lib.mjs";
 import { validateLiveGitDelivery } from "./git-delivery-state.mjs";
 
 const { positional, flags } = parseCli(process.argv.slice(2));
 if (positional.length !== 1) {
-  process.stderr.write("Usage: validate-handoff.mjs <handoff.json> [--binding <binding.json>] [--baseline <baseline.json> --repository <path>]\n");
+  process.stderr.write("Usage: validate-handoff.mjs <handoff.json> [--binding <binding.json>] [--current-issue <snapshot.json> --for-mutation] [--baseline <baseline.json> --repository <path>]\n");
   process.exit(2);
 }
 
@@ -12,10 +18,15 @@ try {
   const handoff = await readJson(positional[0]);
   const binding = typeof flags.get("binding") === "string" ? await readJson(flags.get("binding")) : undefined;
   const baseline = typeof flags.get("baseline") === "string" ? await readJson(flags.get("baseline")) : undefined;
+  const currentIssue = typeof flags.get("current-issue") === "string" ? await readJson(flags.get("current-issue")) : undefined;
   const errors = [
     ...(binding ? validateProjectBinding(binding).map((error) => `binding: ${error}`) : []),
     ...validateHandoff(handoff, { roles: binding?.workflow?.roles }),
   ];
+  if (flags.has("for-mutation")) {
+    if (!currentIssue) errors.push("live-state: --current-issue is required for mutation validation");
+    else errors.push(...validateHandoffAgainstIssue(handoff, currentIssue).map((error) => `live-state: ${error}`));
+  }
   let git;
   if (handoff.software) {
     if (!baseline) {
