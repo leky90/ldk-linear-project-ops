@@ -1,0 +1,22 @@
+[
+  { "query": "Turn our initial customer onboarding goal into a Linear Initiative, Project, phases, milestones, and outcome contracts without creating tasks yet.", "should_trigger": true, "expected_skill": "linear-create-work" },
+  { "query": "fix LDK-123 and hand it to the next responsible role when the current Definition of Done passes", "should_trigger": true, "expected_skill": "linear-do-issue" },
+  { "query": "work on Linear issue OPS-77; it is an operations-change currently Ready to Deliver", "should_trigger": true, "expected_skill": "linear-do-issue" },
+  { "query": "Give me a management report for the bound Linear Project with logical delivery queues, risks, workload, and five next actions.", "should_trigger": true, "expected_skill": "linear-project-status" },
+  { "query": "Publish a native Linear Project Update with at-risk health after checking the live project snapshot.", "should_trigger": true, "expected_skill": "linear-project-status" },
+  { "query": "Reconcile stale handoffs and an abandoned local lock for LDK-991, but preview every mutation first.", "should_trigger": true, "expected_skill": "linear-reconcile" },
+  { "query": "Migrate our legacy RoleFlow v3 plan to v4, show unresolved decisions, and prepare a rollback-safe local apply.", "should_trigger": true, "expected_skill": "linear-reconcile" },
+  { "query": "Create the Linear goal structure for a launch involving content, marketing, sales, operations, support, and finance.", "should_trigger": true, "expected_skill": "linear-create-work" },
+  { "query": "Review LDK-456 in a fresh context and move its publish delivery only to Ready to Deliver if it passes.", "should_trigger": true, "expected_skill": "linear-do-issue" },
+  { "query": "Audit the bound Linear Project for Completed-with-open-work and safely correct only lifecycle mismatches that are directly authorized.", "should_trigger": true, "expected_skill": "linear-reconcile" },
+  { "query": "Change the title of this unrelated Linear issue from Draft copy to Final copy; no project workflow or role handoff is involved.", "should_trigger": false, "expected_skill": "linear" },
+  { "query": "List all Linear teams in my workspace and tell me which one has the most members.", "should_trigger": false, "expected_skill": "linear" },
+  { "query": "Create GitHub issues under example-org/product#42 and add them to GitHub Project 7.", "should_trigger": false, "expected_skill": "github-create-work" },
+  { "query": "Review the current pull request for code bugs and missing tests; there is no Linear issue in scope.", "should_trigger": false, "expected_skill": "code-review" },
+  { "query": "Let's discuss whether our product roadmap should focus on retention or acquisition next quarter without updating any tracker.", "should_trigger": false, "expected_skill": "none" },
+  { "query": "Map Linear LDK-12 to GitHub example/repo#88, but I have not defined which tracker is authoritative or writable.", "should_trigger": false, "expected_skill": "clarification" },
+  { "query": "Search Linear documentation for how custom workflow statuses are configured in the UI.", "should_trigger": false, "expected_skill": "linear" },
+  { "query": "Summarize this pasted project plan in plain English; do not create, update, or inspect Linear.", "should_trigger": false, "expected_skill": "none" },
+  { "query": "Clean up the local Git branches marked gone; this is repository maintenance unrelated to RoleFlow or Linear.", "should_trigger": false, "expected_skill": "clean-gone" },
+  { "query": "Draft a generic QA checklist for a web release without binding it to a Linear Project or issue.", "should_trigger": false, "expected_skill": "none" }
+]

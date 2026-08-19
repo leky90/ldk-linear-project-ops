@@ -9,6 +9,9 @@
   "scripts": {
     "test": "node --test test/*.test.mjs tests/run-tests.mjs",
     "lint": "node --check scripts/*.mjs test/*.test.mjs tests/run-tests.mjs",
-    "check": "npm run lint && npm test"
+    "check": "pnpm run lint && pnpm run test"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0"
   }
 }
