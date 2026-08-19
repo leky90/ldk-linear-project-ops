@@ -19,9 +19,14 @@ export function migrateWorkPlan(input, { targetVersion = 4 } = {}) {
     for (const issue of artifact.issues ?? []) {
       if (issue.priority !== undefined && issue.priority !== "none" && issue.prioritySource === undefined) issue.prioritySource = "explicit";
       if (Array.isArray(issue.delivery?.verification)) {
-        issue.delivery.verification = issue.delivery.verification.map((entry) => (
-          typeof entry === "string" ? { mode: issue.delivery.mode, check: entry } : structuredClone(entry)
-        ));
+        issue.delivery.verification = issue.delivery.verification.map((entry) => {
+          if (typeof entry !== "string") return structuredClone(entry);
+          // A string check that names another mode's terminal signal is the
+          // unresolved mixed-boundary decision itself; stamping the declared
+          // mode over it would launder the conflict out of a re-preview.
+          if (conflictsWithDeclaredMode(issue.delivery.mode, entry)) return { check: entry };
+          return { mode: issue.delivery.mode, check: entry };
+        });
       }
     }
   }
@@ -248,13 +253,20 @@ function diagnoseWorkPlan(artifact, { sourceVersion }) {
   return { warnings: [], decisions: dedupeDecisions(decisions) };
 }
 
+const TERMINAL_SIGNALS = {
+  "software-merge": /\b(?:pull request|PR|merge(?:d)?|integration branch|main branch)\b/iu,
+  "production-release": /\b(?:production|deploy(?:ment|ed)?|release|rollout|smoke)\b/iu,
+  "operations-change": /\b(?:DNS|WAF|HSTS|edge configuration|ruleset|operational change)\b/iu,
+};
+
+function conflictsWithDeclaredMode(mode, checkText) {
+  return Object.entries(TERMINAL_SIGNALS)
+    .some(([candidate, pattern]) => candidate !== mode && pattern.test(checkText));
+}
+
 function diagnoseLegacyTerminalBoundaries(input) {
   const decisions = [];
-  const terminalSignals = {
-    "software-merge": /\b(?:pull request|PR|merge(?:d)?|integration branch|main branch)\b/iu,
-    "production-release": /\b(?:production|deploy(?:ment|ed)?|release|rollout|smoke)\b/iu,
-    "operations-change": /\b(?:DNS|WAF|HSTS|edge configuration|ruleset|operational change)\b/iu,
-  };
+  const terminalSignals = TERMINAL_SIGNALS;
   (input.issues ?? []).forEach((issue, index) => {
     const mode = issue?.delivery?.mode;
     const checks = Array.isArray(issue?.delivery?.verification) ? issue.delivery.verification : [];

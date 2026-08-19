@@ -173,3 +173,20 @@ test("migration apply refuses to clobber an existing output", async () => {
 async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
+
+test("mixed terminal boundaries survive re-preview instead of being laundered", async () => {
+  const plan = JSON.parse(await readFile(join(root, "tests", "fixtures", "legacy-work-plan-v3.json"), "utf8"));
+  plan.issues[0].delivery = {
+    mode: "software-merge",
+    ownerRole: "software-engineer",
+    verification: ["Production deployment is live in the target environment"],
+  };
+  const first = migrateWorkPlan(plan);
+  assert.equal(first.eligibleForApply, false);
+  assert.ok(
+    first.diagnostics.decisions.some((entry) => /mixed-terminal-boundary/u.test(JSON.stringify(entry))),
+    "the conflicting terminal signal raises a decision",
+  );
+  const second = migrateWorkPlan(first.artifact);
+  assert.equal(second.eligibleForApply, false, "re-previewing the migrated artifact must not launder the unresolved boundary");
+});
