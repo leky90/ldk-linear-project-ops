@@ -24,7 +24,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "mcp__linear__.*|linear.*|create_issue|update_issue|create_project|update_project|create_comment|create_issue_label",
+        "matcher": ".*linear.*|mcp__.*__(save|create|delete|update|merge|resolve|archive|prepare|submit|reopen|upload|assign|add|remove)_.*|create_issue|update_issue|create_project|update_project|create_comment|create_issue_label",
         "hooks": [
           {
             "type": "command",
@@ -35,7 +35,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "mcp__linear__.*|linear.*|create_issue|update_issue|create_project|update_project|create_comment|create_issue_label",
+        "matcher": ".*linear.*|mcp__.*__(save|create|delete|update|merge|resolve|archive|prepare|submit|reopen|upload|assign|add|remove)_.*|create_issue|update_issue|create_project|update_project|create_comment|create_issue_label",
         "hooks": [
           {
             "type": "command",
