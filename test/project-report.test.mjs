@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import { buildProjectReport } from "../scripts/build-project-report.mjs";
+import { validateHandoff } from "../scripts/lib.mjs";
 import {
   deriveLogicalIssueState,
   normalizeProjectSnapshot,
@@ -177,3 +178,60 @@ test("open decision totals use logical state", async () => {
 async function fixture(name) {
   return JSON.parse(await readFile(join(root, "tests", "fixtures", name), "utf8"));
 }
+
+test("post-mutation appliedState keeps a handoff fresh after the run's own writes", async () => {
+  const handoff = await fixture("valid-handoff-v2.json");
+  handoff.appliedState = { issueUpdatedAt: "2026-08-18T10:05:00.000Z", status: "In Review" };
+  assert.deepEqual(deriveLogicalIssueState({
+    key: "EXAMPLE-123",
+    status: "In Review",
+    updatedAt: "2026-08-18T10:05:00.000Z",
+    latestHandoff: handoff,
+  }), { state: "ready-to-deliver", source: "handoff", handoffStale: false });
+
+  const stale = await fixture("valid-handoff-v2.json");
+  const derived = deriveLogicalIssueState({
+    key: "EXAMPLE-123",
+    status: "In Review",
+    updatedAt: "2026-08-18T10:05:00.000Z",
+    latestHandoff: stale,
+  });
+  assert.equal(derived.source, "physical");
+  assert.equal(derived.handoffStale, true);
+});
+
+test("appliedState validates as a post-mutation re-read record", async () => {
+  const handoff = await fixture("valid-handoff-v2.json");
+  handoff.appliedState = { issueUpdatedAt: "2026-08-18T10:05:00.000Z", status: "In Review" };
+  assert.equal(validateHandoff(handoff).length, 0);
+  handoff.appliedState.issueUpdatedAt = "2026-08-18T09:00:00.000Z";
+  assert.ok(validateHandoff(handoff).some((error) => /appliedState/u.test(error)), "appliedState cannot predate the observation");
+});
+
+test("terminal issues never sit in the blocker queue and canceled blockers resolve", async () => {
+  const snapshot = await fixture("project-snapshot.json");
+  snapshot.issues = [
+    { key: "task.done", type: "task", title: "Done with old blocker", status: "Done", terminalVerified: true, priority: "high", ownerRole: "operations-lead", relations: { blockedByKeys: ["task.open"] } },
+    { key: "task.open", type: "task", title: "Open dependency", status: "In Progress", priority: "normal", ownerRole: "operations-lead" },
+    { key: "task.unblocked", type: "task", title: "Blocked only by canceled work", status: "Ready", priority: "normal", ownerRole: "operations-lead", relations: { blockedByKeys: ["task.gone"] } },
+    { key: "task.gone", type: "task", title: "Canceled dependency", status: "Canceled", priority: "low", ownerRole: "operations-lead" },
+  ];
+  const report = buildProjectReport(snapshot);
+  assert.doesNotMatch(report, /Blocked: .*Done with old blocker/u, "verified Done work is not actionable as blocked");
+  assert.match(report, /- Không có blocker\./u);
+  assert.match(report, /Ready 1;/u, "an issue blocked only by canceled work returns to Ready");
+});
+
+test("workspace state maps and stock Linear names normalize instead of degrading to unknown", async () => {
+  const snapshot = await fixture("project-snapshot.json");
+  snapshot.workflow = { states: { "Quality Gate": "in-review" } };
+  snapshot.issues = [
+    { key: "task.custom", type: "task", title: "Custom state work", status: "Quality Gate", priority: "high", ownerRole: "tech-lead" },
+    { key: "task.todo", type: "task", title: "Stock todo work", status: "Todo", priority: "normal", ownerRole: "operations-lead" },
+    { key: "task.backlog", type: "task", title: "Stock backlog work", status: "Backlog", priority: "low", ownerRole: "operations-lead" },
+  ];
+  const normalized = normalizeProjectSnapshot(snapshot);
+  assert.equal(normalized.issues[0].logicalState, "in-review");
+  assert.equal(normalized.issues[1].logicalState, "ready");
+  assert.equal(normalized.issues[2].logicalState, "refinement");
+});

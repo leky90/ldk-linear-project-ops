@@ -14,10 +14,20 @@ export function buildProjectReport(input) {
   if (Number.isNaN(asOf.valueOf())) throw new Error("snapshot.asOf is invalid");
   const issues = snapshot.issues.filter((issue) => issue.logicalState !== "canceled");
   const issueByKey = new Map(issues.map((issue) => [issue.key ?? issue.id, issue]));
+  // Blocker endpoints resolve against every snapshot issue, including the
+  // canceled ones filtered out of the actionable set: a canceled blocker no
+  // longer blocks anything, and terminal work is never actionable as blocked.
+  const allIssuesByKey = new Map(snapshot.issues.map((issue) => [issue.key ?? issue.id, issue]));
   const blockedKeys = (issue) => issue.relations?.blockedByKeys ?? issue.blockedByKeys ?? [];
+  const blockerOpen = (key) => {
+    const blocker = allIssuesByKey.get(key);
+    if (!blocker) return true;
+    return blocker.logicalState !== "done" && blocker.logicalState !== "canceled";
+  };
   const done = issues.filter((issue) => issue.logicalState === "done" && issue.terminalVerified === true);
   const terminalMismatches = issues.filter((issue) => issue.logicalState === "done" && issue.terminalVerified !== true);
-  const blocked = issues.filter((issue) => issue.logicalState === "blocked" || blockedKeys(issue).some((key) => issueByKey.get(key)?.logicalState !== "done"));
+  const blocked = issues.filter((issue) => issue.logicalState !== "done"
+    && (issue.logicalState === "blocked" || blockedKeys(issue).some(blockerOpen)));
   const ready = issues.filter((issue) => issue.logicalState === "ready" && !blocked.includes(issue));
   const review = issues.filter((issue) => issue.logicalState === "in-review");
   const active = issues.filter((issue) => issue.logicalState === "in-progress");

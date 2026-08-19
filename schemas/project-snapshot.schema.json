@@ -4,40 +4,128 @@
   "title": "RoleFlow Project Snapshot",
   "type": "object",
   "additionalProperties": false,
-  "required": ["asOf", "project", "initiatives", "milestones", "issues"],
+  "required": [
+    "asOf",
+    "project",
+    "initiatives",
+    "milestones",
+    "issues"
+  ],
   "properties": {
-    "asOf": { "type": "string", "format": "date-time" },
+    "asOf": {
+      "type": "string",
+      "format": "date-time"
+    },
     "project": {
       "type": "object",
-      "required": ["id", "name"],
+      "required": [
+        "id",
+        "name"
+      ],
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
-        "name": { "type": "string", "minLength": 1 }
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
       },
       "additionalProperties": true
     },
-    "initiatives": { "type": "array", "items": { "type": "object" } },
-    "phases": { "type": "array", "items": { "type": "object" } },
-    "milestones": { "type": "array", "items": { "type": "object" } },
+    "initiatives": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "phases": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "milestones": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
     "issues": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["key", "title", "status"],
+        "required": [
+          "key",
+          "title",
+          "status"
+        ],
         "properties": {
-          "key": { "type": "string", "minLength": 1 },
-          "title": { "type": "string", "minLength": 1 },
-          "status": { "type": "string", "minLength": 1 },
-          "logicalState": { "type": "string", "minLength": 1 },
-          "priority": { "enum": ["urgent", "high", "normal", "low", "none"] },
-          "prioritySource": { "enum": ["explicit", "inherited", "policy-default", "legacy-none", "unknown"] },
-          "ownerRole": { "type": "string" },
-          "reviewerRole": { "type": "string" },
-          "parentKey": { "type": "string" },
-          "phaseKey": { "type": "string" },
-          "latestHandoff": { "type": "object" }
+          "key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "logicalState": {
+            "type": "string",
+            "minLength": 1
+          },
+          "priority": {
+            "enum": [
+              "urgent",
+              "high",
+              "normal",
+              "low",
+              "none"
+            ]
+          },
+          "prioritySource": {
+            "enum": [
+              "explicit",
+              "inherited",
+              "policy-default",
+              "legacy-none",
+              "unknown"
+            ]
+          },
+          "ownerRole": {
+            "type": "string"
+          },
+          "reviewerRole": {
+            "type": "string"
+          },
+          "parentKey": {
+            "type": "string"
+          },
+          "phaseKey": {
+            "type": "string"
+          },
+          "latestHandoff": {
+            "type": "object"
+          }
         },
         "additionalProperties": true
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "states": {
+          "type": "object",
+          "description": "Map of workspace status names to logical states for renamed or non-English workflows.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
       }
     }
   }
