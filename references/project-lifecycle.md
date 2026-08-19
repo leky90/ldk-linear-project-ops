@@ -1,5 +1,11 @@
 # Project lifecycle policy
 
+Project analysis consumes a normalized snapshot. Physical Linear status remains
+observed data; logical `ready-to-deliver` and `delivery-verification` may come from a
+fresh validated handoff v2 when custom states are unavailable. Unknown custom states,
+stale handoffs, policy-defaulted priorities, and terminal mismatches remain visible
+diagnostics rather than disappearing from reports.
+
 Resolve Project status from live Linear data. Prefer `status.id`, `status.name`, and
 its category; never assume a workspace uses a particular custom status name.
 

@@ -1,5 +1,9 @@
 # [Role-owned deliverable]
 
+- Logical phase:
+- Priority: urgent | high | normal | low
+- Priority source: explicit | inherited | policy-default
+
 ## Outcome
 
 Describe the result this issue advances.
@@ -17,7 +21,7 @@ Name one concrete output owned by the current role.
 - Mode: decision | artifact-review | publish | external-action | software-merge | production-release | operations-change
 - Delivery owner role:
 - Exact target (when applicable):
-- Terminal verification:
+- Terminal verification: `{ mode, check }`
 
 ## Definition of Ready
 

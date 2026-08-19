@@ -1,5 +1,9 @@
 # {{outcome_title}}
 
+- Logical phase: `{{phase_key}}`
+- Priority: `{{priority}}`
+- Priority source: `{{priority_source}}`
+
 ## Outcome
 
 {{measurable_result}}
@@ -13,7 +17,7 @@
 - Mode: `{{delivery_mode}}`
 - Delivery owner role: `{{delivery_owner_role}}`
 - Exact target: `{{delivery_target_or_not_applicable}}`
-- Terminal verification: {{delivery_verification}}
+- Terminal verification objects: {{typed_delivery_verification}}
 
 ## Scope
 
@@ -41,6 +45,6 @@
 
 ## Handoff
 
-- Owner role: `tech-lead`
+- Owner role: `{{accountable_lead_or_owner_role}}`
 - Reviewer role: `{{reviewer_role}}`
 - Milestone: `{{milestone}}`

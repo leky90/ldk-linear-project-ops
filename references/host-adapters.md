@@ -14,6 +14,17 @@ validated preview, report the exact capability gap and stop that mutation.
 
 Local issue locks and Git baselines live under ignored `.linear-ops/` state. They never appear in Linear. Hosts on different machines do not share local locks; use a separately approved shared lock service when true cross-machine concurrency is required.
 
+Map canonical values through `scripts/linear-tool-mapping.mjs`: priorities become
+Linear values 1-4, Project health becomes `onTrack`, `atRisk`, or `offTrack`, and
+relations map `blockedByKeys → blockedBy`, `relatedToKeys → relatedTo`,
+`duplicateOfKey → duplicateOf`, and `parentKey → parentId`. Classify tool operations
+by their normalized verb. Unknown Linear operations are capability warnings and must
+not be guessed as reads or writes.
+
+For lifecycle handoff, map only the abstract session/model/effort values described in
+[execution-profiles.md](execution-profiles.md). If fresh sessions or subagents are
+unsupported, return the exact resume prompt and stop without claiming dispatch.
+
 Hook routing:
 
 - session start → verify project boundary;

@@ -4,11 +4,13 @@ Keep planning dimensions separate:
 
 - `ownerRole`: kind of worker responsible for the current phase.
 - `assigneeId`: actual accountable Linear member.
-- `priority`: relative importance.
+- `priority`: relative importance; every new issue uses `urgent`, `high`, `normal`, or `low`.
+- `prioritySource`: `explicit`, `inherited`, or `policy-default`; defaulted new work uses `normal` and remains visible in reports.
 - `estimate`: expected effort or complexity, using the team's configured scale.
 - `cycleId`: time-box in which the team commits to work; it is not a release.
 - `dueDate`: issue-specific deadline.
 - `milestoneKey`: lifecycle checkpoint the issue advances.
+- `phaseKey`: ordered logical Project phase stored as RoleFlow metadata, not a fabricated native Linear object.
 - Project `startDate` and `targetDate`: project planning window.
 - Project `projectStatus.id/name/category`: live Linear lifecycle status; category is one of `backlog`, `planned`, `in-progress`, `completed`, or `canceled`.
 - Project `lifecycle.mode`: `bounded` or `continuous`; completion criteria define the whole Project end-state.

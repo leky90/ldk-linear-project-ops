@@ -46,8 +46,9 @@ make a public deployment or edge readback part of that issue's terminal DoD.
    history.
 2. Execution skills update the correct native artifact and publish only a concise
    handoff with accessible evidence.
-3. A work plan is rejected when one issue's terminal verification mixes
-   `software-merge`, `production-release` or `operations-change` signals.
+3. Work plan v4 requires every verification object to repeat its declared delivery
+   mode. A mismatched mode is rejected structurally; no English or Vietnamese keyword
+   inference decides terminal boundaries.
 4. Rendered handoff comments summarize successful checks and cap repeated lists;
    the durable handoff artifact may retain full detail.
 5. Local absolute or repository-relative evidence paths are omitted from rendered
@@ -67,5 +68,6 @@ planning/execution/reconciliation skill routes through this contract.
 - `references/comment-policy.md`
 - `references/software-work.md`
 - `scripts/lib.mjs`
+- `scripts/delivery-lifecycle.mjs`
 - `test/architecture.test.mjs`
 - `tests/run-tests.mjs`

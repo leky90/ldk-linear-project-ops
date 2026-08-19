@@ -59,8 +59,9 @@ shared distributed lock nếu cần là hạ tầng riêng ngoài plugin.
 
 ## Creation and reporting paths
 
-`linear-create-work` tạo work plan v3 rồi apply theo thứ tự Initiative → Project →
-Milestone → Resource → Outcome/Task/Decision → relations. Stable keys và post-write
+`linear-create-work` tạo work plan v4 `goal-structure` rồi apply theo thứ tự Initiative → Project →
+logical phase metadata → Milestone → Resource → Outcome/Decision → relations. Execution
+tasks chỉ xuất hiện khi role claim outcome và tạo `outcome-decomposition`. Stable keys và post-write
 re-read giữ retry idempotent. Host không có native mutation nào thì plugin report
 capability gap; không mô phỏng object đó bằng issue/comment sai tầng.
 

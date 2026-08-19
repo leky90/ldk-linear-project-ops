@@ -1,11 +1,11 @@
 ---
 name: linear-do-issue
-description: Perform one Linear issue as its currently responsible role, align a not-yet-started Project to In Progress, and hand work to the next role. Use for requests such as "Hãy thực hiện issue LDK-123", including product analysis, technical breakdown, software implementation, QA review, content creation, marketing, sales, and other role-owned work.
+description: Use when asked to perform one exact Linear issue as its currently responsible role, including product, content, marketing, sales, operations, support, legal, finance, software, and review work.
 ---
 
 # Do One Linear Issue
 
-Treat one run as one employee performing one role-phase. Do not switch to another issue or adopt the next role unless the user explicitly asks.
+Treat one run as one employee performing one role-phase under RoleFlow v4. Do not switch to another issue or adopt the next role unless the user explicitly asks.
 Route artifacts with [artifact-routing.md](../../references/artifact-routing.md): the
 issue remains a planning contract, repository-native technical evidence remains in
 the repository, and Linear receives only durable links plus a concise human handoff.
@@ -35,11 +35,11 @@ the repository, and Linear receives only durable links plus a concise human hand
 
 1. Acquire the packaged local file lock immediately before work. Keep lock IDs, renewal, and recovery out of Linear comments.
 2. Perform the actual role deliverable using attached resources and the relevant repository/domain workflow.
-3. For a tech lead, break an `outcome` issue into independently owned direct sub-issues only when breakdown is the requested deliverable. Do not time-slice work for agent convenience and never create an issue-level `initiative`.
+3. When the responsible lead or owner role claims an outcome and discovers multiple independently reviewable deliverables, create a work plan v4 with `planningStage: outcome-decomposition` and that claimed outcome as `sourceOutcomeKey`. Create only direct task or decision children, assign owner/reviewer roles, apply explicit or inherited priority, remove convenience dependencies, prove the graph is acyclic, and expose deterministic parallel waves. Do not time-slice work for agent convenience and never create an issue-level `initiative`. Follow [decomposition-policy.md](../../references/decomposition-policy.md).
 4. For software implementation, follow [software-work.md](../../references/software-work.md): isolate Git work internally, verify scope, and produce commit/PR/test evidence before QA handoff.
 5. Update the correct durable artifact first. Do not turn an issue description or resource into an append-only phase journal. Repository-native technical evidence—specs, ADRs, BDD/TDD state, commands, local verification, and implementation history—stays in the repository. Comments summarize and link accessible commit/PR/CI/resource evidence; they do not become the artifact.
-6. Check the role-phase Definition of Done and create a local handoff JSON matching `schemas/handoff.schema.json`, including `delivery.mode` and the resulting `delivery.phase`.
-7. Validate and render the human comment with `validate-handoff.mjs` and `render-work-comment.mjs`.
+6. Check the role-phase Definition of Done and create a local handoff v2 JSON matching `schemas/handoff.schema.json`, including observed issue state/timestamp, explicit logical transition, typed shared/local evidence, typed delivery checks, and the resulting `delivery.phase`.
+7. Validate with `validate-handoff.mjs --for-mutation --current-issue <snapshot.json>` and render the human comment with `render-work-comment.mjs`. Never render local evidence, session/model identifiers, prompts, raw timestamps, lock state, or validator payloads.
 8. Post exactly one handoff, review, or blocked comment using [comment-policy.md](../../references/comment-policy.md).
 9. Update status and the single current `role:*` label using [delivery-lifecycle.md](../../references/delivery-lifecycle.md):
    - successful delivery → `In Review` plus reviewer role;
@@ -55,6 +55,13 @@ the repository, and Linear receives only durable links plus a concise human hand
 12. Recheck branch, status, and `git worktree list --porcelain`, then report the
     actual handoff and cleanup result. Do not call an issue fully closed while
     silently leaving a disposable task worktree or merged task branch active.
+
+## Independent review and lifecycle handoff
+
+- Inline execution is the default. A reviewer already operating in a separate session may review inline because the context is fresh.
+- If this session authored the deliverable and must also coordinate review, dispatch a fresh-context reviewer subagent with only the issue contract, canonical deliverable, DoD, accessible evidence, and limitations. The main context may validate/apply the result but may not self-approve.
+- If the host lacks subagent capability, stop at `In Review`, post the validated handoff, and return an exact resume prompt. Never claim review occurred.
+- A lifecycle handoff may request `reuse`, `new-preferred`, or `new-required` plus abstract `fast|standard|reasoning` model class and `low|medium|high` effort. Start a new session only when the host supports it; otherwise stop and return the exact resume prompt. Follow [execution-profiles.md](../../references/execution-profiles.md).
 
 Never write claim, heartbeat, token, raw baseline, or validator JSON into Linear. Never mark a review passed on behalf of a different role.
 

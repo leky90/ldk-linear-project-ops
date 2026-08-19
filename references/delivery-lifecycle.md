@@ -15,6 +15,11 @@ Every new issue declares:
   exact target when one exists;
 - `delivery.verification`: observable checks required before `Done`.
 
+Work plan v4 writes every terminal check as `{ mode, check }`; the check mode must
+equal `delivery.mode`. Handoff v2 adds observed live state, explicit logical
+transition, shared/local typed evidence, review independence, and delivery check
+results. Only supported `shared` evidence is rendered to Linear.
+
 Do not combine an approved plan and its later execution in one issue when they
 have different owners, authorization, evidence, or delivery modes. For example,
 an approved marketing plan is `artifact-review`; launching the campaign is a
@@ -75,6 +80,10 @@ IDs from the consumer binding and live workflow. If either state is unavailable,
 keep the issue in `In Review` and record `delivery.phase` as
 `ready-to-deliver` or `delivery-verification` in the validated handoff/resource.
 Never fabricate a status or use `Done` as a substitute.
+
+Handoff v2 event types are `handoff`, `review`, `delivery`, `verification`,
+`blocked`, and `reconciliation`. Mutation validation re-reads the issue and rejects
+a stale `issueUpdatedAt` or a logical `transition.from` that no longer matches.
 
 ## Authorization and evidence
 

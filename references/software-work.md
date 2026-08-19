@@ -29,8 +29,9 @@ remains the stable planning contract; implementation chronology belongs in Git.
 Use `artifact-review` for a specification, BDD RED contract, technical decision, or
 other software artifact whose accepted artifact is terminal. Any issue whose outcome
 changes the integration branch uses `software-merge`; an unmerged PR is then only a
-handoff checkpoint. Production deployment is a separate `production-release` issue
-unless the approved scope explicitly combines merge and release.
+handoff checkpoint. Production deployment is a separate `production-release` issue.
+Merge and release have different authority, target, evidence, rollback, and terminal
+verification, so they are never combined into one delivery contract.
 
 For `software-merge`, QA pass moves the issue to `Ready to Deliver` only when the PR
 is non-draft, required checks are green, the reviewed SHA is current, and no required

@@ -22,7 +22,7 @@ Project            — một chương trình/sản phẩm có owner và target d
         ↓
 Milestone          — cột mốc kết quả quan trọng trong project
         ↓
-Outcome issue      — kết quả lớn cần Tech Lead phân rã
+Outcome issue      — kết quả lớn do lead/owner phù hợp claim
         ↓
 Task / Decision    — deliverable của một vai trò hoặc quyết định cần chốt
 ```
@@ -35,9 +35,9 @@ và `references/planning-properties.md`.
 ## RoleFlow
 
 ```text
-CPO tạo Initiative/Project/brief/PRD/outcome
+CPO/Owner tạo Initiative/Project/phase/milestone/outcome
         ↓
-Tech Lead làm rõ outcome và tạo task theo vai trò
+Lead/Owner claim outcome rồi mới phân rã deliverable
         ↓
 Engineer, Writer, Marketer, Sales… tạo deliverable
         ↓
@@ -74,9 +74,9 @@ Plugin tự đọc live state và thực hiện đúng một role phase:
   người dùng yêu cầu trực tiếp.
 - `linear-reconcile`: sửa bất nhất và dọn legacy bằng preview exact-ID có phê duyệt.
 
-## Work plan v3
+## Work plan v4 và handoff v2
 
-Schema canonical là `schemas/work-plan.schema.json` v3. Nó hỗ trợ:
+Schema canonical là `schemas/work-plan.schema.json` v4. Nó hỗ trợ:
 
 - native Initiative, Project và Milestone;
 - live project status ID/name/category, lifecycle mode, completion criteria, priority/lead/members/start/target;
@@ -86,6 +86,10 @@ Schema canonical là `schemas/work-plan.schema.json` v3. Nó hỗ trợ:
 - structured external blocker cho dependency thực sự nằm ngoài issue graph;
 - resources, DoR, DoD và role routing.
 - delivery contract bắt buộc với mode, owner, target tùy chọn và terminal verification.
+- `goal-structure` chỉ tạo Initiative/Project/logical phase/milestone/outcome/decision, không tạo execution task;
+- `outcome-decomposition` chỉ chạy khi role claim một outcome và tạo direct children theo parallel waves tối thiểu dependency;
+- priority mới bắt buộc `urgent`, `high`, `normal`, hoặc `low`, kèm nguồn explicit/inherited/policy-default;
+- terminal verification typed `{ mode, check }` và mode phải khớp delivery contract.
 
 `blockedByKeys` là chiều canonical trong work plan và map sang native Linear
 `blockedBy`; chiều `blocks` được suy ra. `relatedToKeys` map sang `relatedTo`,
@@ -99,13 +103,16 @@ Các delivery mode là `decision`, `artifact-review`, `publish`, `external-actio
 cho phép bàn giao; `Done` còn cần bằng chứng terminal đúng mode. Xem
 `references/delivery-lifecycle.md`.
 
-Plan v1/v2 vẫn được đọc để tương thích; mọi plan mới phải ghi v3 và map issue-level
-`initiative` cũ thành `outcome`.
+Plan v1-v3 và handoff v1 vẫn được đọc để tương thích; mọi artifact mới phải ghi work
+plan v4 và handoff v2. Legacy mutation phải preview migration, giải quyết decisions,
+kiểm source hash rồi mới apply; rollback dùng compare-and-swap để không ghi đè thay
+đổi độc lập.
 
 ## Project status và legacy cleanup
 
 Status report phân biệt issue-count progress với estimated-effort progress, trình
-bày Initiative, Milestone, role queue, blocker, decision, latest Project Update và
+bày Initiative, logical phase, Milestone, outcome, role/delivery queue, blocker,
+decision, unknown/stale diagnostics, latest Project Update và
 Project lifecycle consistency. Backlog/Planned có execution evidence được đề xuất
 chuyển sang live status thuộc category In Progress. Continuous Project tạm hết
 outcome vẫn giữ In Progress và yêu cầu CPO chọn outcome tiếp theo; plugin không tự
@@ -124,9 +131,9 @@ hủy, apply rồi re-read. Issue/comment lịch sử không tự động bị x
 ## Cấu trúc plugin
 
 - `skills/`: bốn entry point công khai.
-- `references/`: hierarchy, role routing, policy, software work và cleanup.
-- `schemas/`: binding, work plan, handoff, project update, cleanup và Git baseline.
-- `scripts/`: validator, renderer, report, hooks, Git guard và local file lock.
+- `references/`: hierarchy, decomposition, execution profile, role routing, policy, software work và cleanup.
+- `schemas/`: binding, work plan, handoff, migration, snapshot, project update, cleanup và Git baseline.
+- `scripts/`: validator, migration/rollback, snapshot normalizer, renderer, report, hooks, Git guard và local file lock.
 - `assets/`: template Initiative, Milestone, outcome/task, brief, PRD và comment.
 - `examples/`: binding giả lập để copy vào consumer repository.
 

@@ -1,11 +1,11 @@
 ---
 name: linear-create-work
-description: Create or update native Linear initiatives, projects, milestones, role-ready outcome issues, tasks, decisions, briefs, PRDs, and resources. Use when an owner asks to plan, draft, create, organize, schedule, or update strategic and execution work in Linear.
+description: Use when an owner asks to plan, draft, create, organize, schedule, or update goal structure in Linear through native initiatives, projects, milestones, outcomes, decisions, briefs, PRDs, and resources.
 ---
 
 # Create Linear Work
 
-Turn an owner's intent into native Linear planning objects and human-readable role-owned work packets. Follow `Initiative → Project → Milestone → Issue → Sub-issue`; never use an issue-level `initiative` type.
+Turn an owner's intent into native Linear planning objects and human-readable outcome contracts. RoleFlow v4 planning is goal-first: follow `Initiative → Project → logical phase → Milestone → Outcome/Decision`; never use an issue-level `initiative` type and never create execution tasks during initial goal structure.
 
 Before selecting a tracker, read [tracker-routing.md](../../references/tracker-routing.md).
 Before choosing issue, resource, repository, or comment placement, read
@@ -25,20 +25,20 @@ also exists.
    - Ask again only for destructive, bulk, ambiguous, or materially expanded work.
 4. Select the smallest correct Linear object using [linear-hierarchy.md](../../references/linear-hierarchy.md). Use native Initiatives only for an objective spanning projects; use milestones for lifecycle checkpoints, not departments or weeks.
 5. Keep each issue description as a stable planning contract: outcome, scope, acceptance criteria, dependencies, owner, and one terminal delivery boundary. Do not append timestamped execution history. Put business-facing PRDs and decisions in Linear resources; put technical specs, ADRs, BDD/TDD contracts, commands, and local verification in the repository; keep full artifacts out of comments.
-6. Draft a schema-v3 work plan matching `schemas/work-plan.schema.json`, including project properties, native initiatives, milestones, resources, role-owned issues, scheduling properties, and relations that are actually known. Follow [issue-relations.md](../../references/issue-relations.md): every DoR dependency on another planned issue/decision needs `blockedByKeys`; a genuinely external dependency needs structured `externalBlocker`. New plans use `projectStatus: { id, name, category }` from live Linear and may declare `lifecycle.mode` plus completion criteria; `project.status` is legacy read compatibility only. Persist lifecycle mode/criteria in the Project description or an approved lifecycle resource because they are RoleFlow contract metadata, not fabricated native Linear fields.
-7. Give every issue a `delivery` contract from [delivery-lifecycle.md](../../references/delivery-lifecycle.md): select one mode, name the terminal `ownerRole`, record the target when applicable, and list observable verification checks. One issue has one terminal delivery mode. Split approved artifacts from later publish, outreach, merge, deploy, filing, spending, or production mutation when ownership, authority, or evidence differs. Plans v1/v2 are read-compatible only.
-8. Use `outcome` for a manager-readable parent issue, `task` for one independently owned deliverable, and `decision` for authority or judgment. Use one direct sub-issue level.
+6. Draft a work plan v4 with `planningStage: goal-structure` matching `schemas/work-plan.schema.json`. It may include native Initiative/Project data, ordered logical phases, native milestones, outcome issues, blocking decisions, resources, lifecycle criteria, and known relations. It must not create execution tasks. Logical phases are RoleFlow metadata in the Project description or approved lifecycle resource, not fabricated native Linear objects. Follow [decomposition-policy.md](../../references/decomposition-policy.md).
+7. Every new outcome or decision receives priority `urgent`, `high`, `normal`, or `low`. Use explicit priority first; otherwise use the documented policy default `normal` and record `prioritySource: policy-default`. Never write new priority `none`.
+8. Give every issue a typed `delivery` contract from [delivery-lifecycle.md](../../references/delivery-lifecycle.md): select one mode, name the terminal `ownerRole`, record the target when applicable, and express every terminal check as `{ mode, check }` using the same mode. One issue has one terminal delivery mode. Split approved artifacts from later publish, outreach, merge, deploy, filing, spending, or production mutation when ownership, authority, or evidence differs.
 9. Distinguish role from accountability and scheduling: issue `ownerRole` owns the current deliverable, `delivery.ownerRole` owns terminal delivery, `assigneeId` names the responsible person, estimate sizes effort, cycle time-boxes team commitment, due date deadlines the issue, and milestone marks a project checkpoint.
-10. Validate with the packaged `validate-work-plan.mjs`; for writes require `--apply`.
-11. Apply in dependency order: resources and native initiative, project properties, milestones, outcome issues, child tasks, then relations. Map `blockedByKeys → blockedBy`, `relatedToKeys → relatedTo`, `duplicateOfKey → duplicateOf`, and `parentKey → parentId`; derive the inverse `blocks` edge instead of storing `blocksKeys`. Re-read both ends of every changed relation.
+10. Validate with the packaged `validate-work-plan.mjs`; for writes require `--apply`. Work plans v1-v3 are read-compatible only and must pass `migrate-contract.mjs preview` plus an eligible migration before apply.
+11. Apply in dependency order: resources and native initiative, project properties and logical phase metadata, milestones, outcomes, decisions, then relations. Map `blockedByKeys → blockedBy`, `relatedToKeys → relatedTo`, `duplicateOfKey → duplicateOf`, and `parentKey → parentId`; derive the inverse `blocks` edge instead of storing `blocksKeys`. Re-read both ends of every changed relation.
 12. Creating planned work does not itself prove execution began. Do not downgrade an active Project or infer Completed from a fully Done plan; use [project-lifecycle.md](../../references/project-lifecycle.md).
 
-Use [work-model.md](../../references/work-model.md), [delivery-lifecycle.md](../../references/delivery-lifecycle.md), [artifact-routing.md](../../references/artifact-routing.md), [linear-hierarchy.md](../../references/linear-hierarchy.md), [issue-relations.md](../../references/issue-relations.md), [planning-properties.md](../../references/planning-properties.md), [project-lifecycle.md](../../references/project-lifecycle.md), [approval-policy.md](../../references/approval-policy.md), and [comment-policy.md](../../references/comment-policy.md). Use the initiative, milestone, outcome issue, product brief, PRD, and task templates when applicable.
+Use [work-model.md](../../references/work-model.md), [decomposition-policy.md](../../references/decomposition-policy.md), [delivery-lifecycle.md](../../references/delivery-lifecycle.md), [artifact-routing.md](../../references/artifact-routing.md), [linear-hierarchy.md](../../references/linear-hierarchy.md), [issue-relations.md](../../references/issue-relations.md), [planning-properties.md](../../references/planning-properties.md), [project-lifecycle.md](../../references/project-lifecycle.md), [approval-policy.md](../../references/approval-policy.md), and [comment-policy.md](../../references/comment-policy.md). Use the initiative, milestone, outcome issue, product brief, and PRD templates when applicable.
 
 ## Role-ready output
 
-- A CPO-created outcome issue normally hands off to `tech-lead`; a native Initiative groups related Projects and is not executable work.
-- A tech-lead breakdown creates tasks owned by the actual executing roles; split by independently owned deliverables, not agent time slices.
+- An outcome remains assigned to the accountable lead or owner role until that role claims it for execution; a native Initiative groups related Projects and is not executable work.
+- Claim-time decomposition happens in `$linear-do-issue`, not during this goal-structure pass.
 - A decision stays in `Refinement` and is not executable.
 - `Ready` means the current role's DoR is satisfied and blockers are resolved.
 

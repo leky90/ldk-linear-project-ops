@@ -38,6 +38,6 @@ operations workspace for any specific Linear project.
 - Keep internal lock tokens local. Never publish them, run IDs, heartbeats, local
   paths, or raw handoff JSON to Linear.
 
-Before handoff, run `npm run check`, validate every skill, validate the plugin
+Before handoff, run `pnpm run check`, validate every skill, validate the plugin
 manifest, scan tracked content for real bindings/secrets, and use the plugin
 cachebuster/reinstall flow when installed behavior changed.
