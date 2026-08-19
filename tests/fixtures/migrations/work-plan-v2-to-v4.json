@@ -1,0 +1,55 @@
+{
+  "artifact": {
+    "schemaVersion": 4,
+    "kind": "linear-role-work-plan",
+    "mode": "preview",
+    "planningStage": "goal-structure",
+    "summary": "Legacy synthetic plan without canonical delivery metadata.",
+    "project": {
+      "id": "project-1",
+      "teamIds": ["team-1"],
+      "name": "Legacy example project",
+      "projectStatus": {
+        "id": "project-status-planned",
+        "name": "Planned",
+        "category": "planned"
+      },
+      "priority": "normal"
+    },
+    "initiatives": [],
+    "milestones": [],
+    "resources": [],
+    "issues": [
+      {
+        "key": "legacy.outcome.example",
+        "type": "outcome",
+        "title": "Deliver the legacy example",
+        "outcome": "The legacy example is complete.",
+        "deliverable": "Legacy artifact.",
+        "status": "Ready",
+        "priority": "normal",
+        "prioritySource": "explicit",
+        "ownerRole": "product-manager",
+        "reviewerRole": "cpo",
+        "definitionOfReady": ["Scope exists"],
+        "definitionOfDone": ["Artifact is reviewable"],
+        "resourceKeys": [],
+        "relations": {
+          "blockedByKeys": [],
+          "relatedToKeys": []
+        }
+      }
+    ]
+  },
+  "diagnostics": {
+    "warnings": [],
+    "decisions": [
+      {
+        "code": "missing-delivery",
+        "path": "issues[0].delivery",
+        "message": "Choose an explicit delivery mode and terminal checks."
+      }
+    ]
+  },
+  "eligibleForApply": false
+}

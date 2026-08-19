@@ -1,0 +1,53 @@
+{
+  "artifact": {
+    "schemaVersion": 2,
+    "kind": "linear-role-handoff",
+    "type": "handoff",
+    "issueId": "EXAMPLE-123",
+    "fromRole": "tech-lead",
+    "toRole": "software-engineer",
+    "summary": "Requirements were analyzed and the implementation task is ready.",
+    "transition": {
+      "from": "in-progress",
+      "to": "in-review"
+    },
+    "deliverables": ["Implementation notes", "Acceptance examples"],
+    "checks": [
+      { "item": "Scope is explicit", "passed": true },
+      { "item": "Dependencies are linked", "passed": true }
+    ],
+    "evidence": [
+      {
+        "kind": "linear-resource",
+        "label": "PRD",
+        "value": "Linear resource: Onboarding PRD",
+        "visibility": "shared"
+      }
+    ],
+    "knownLimitations": ["Analytics naming still needs product confirmation"],
+    "delivery": {
+      "mode": "artifact-review",
+      "ownerRole": "tech-lead",
+      "phase": "review",
+      "target": "Linear resource: Onboarding PRD",
+      "checks": []
+    },
+    "nextAction": "Software Engineer implements the linked task and submits it for QA review."
+  },
+  "diagnostics": {
+    "warnings": [],
+    "decisions": [
+      {
+        "code": "missing-observed-state",
+        "path": "observedState",
+        "message": "Capture live issue timestamps and logical state before mutation."
+      },
+      {
+        "code": "missing-delivery-checks",
+        "path": "delivery.checks",
+        "message": "Define typed terminal delivery checks."
+      }
+    ]
+  },
+  "eligibleForApply": false
+}

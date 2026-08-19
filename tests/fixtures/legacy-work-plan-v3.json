@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 3,
+  "kind": "linear-role-work-plan",
+  "mode": "preview",
+  "summary": "Legacy v3 synthetic decomposition.",
+  "project": {
+    "id": "project-1",
+    "teamIds": ["team-1"],
+    "projectStatus": {
+      "id": "status-in-progress",
+      "name": "In Progress",
+      "category": "in-progress"
+    },
+    "lifecycle": {
+      "mode": "bounded",
+      "completionCriteria": ["The synthetic outcome has terminal evidence"]
+    },
+    "priority": "high"
+  },
+  "initiatives": [],
+  "milestones": [],
+  "resources": [],
+  "issues": [
+    {
+      "key": "legacy.outcome.launch",
+      "type": "outcome",
+      "title": "Deliver the synthetic launch",
+      "outcome": "The synthetic launch is delivered.",
+      "deliverable": "Accepted launch package.",
+      "delivery": {
+        "mode": "artifact-review",
+        "ownerRole": "marketing-lead",
+        "verification": ["The canonical launch package is accepted"]
+      },
+      "status": "Ready",
+      "priority": "high",
+      "ownerRole": "marketing-lead",
+      "reviewerRole": "cpo",
+      "definitionOfReady": ["Scope is explicit"],
+      "definitionOfDone": ["Child work is reviewable"],
+      "resourceKeys": [],
+      "relations": { "blockedByKeys": [], "relatedToKeys": [] }
+    },
+    {
+      "key": "legacy.task.content",
+      "type": "task",
+      "parentKey": "legacy.outcome.launch",
+      "title": "Prepare launch content",
+      "outcome": "Launch content is approved.",
+      "deliverable": "Accepted content package.",
+      "delivery": {
+        "mode": "artifact-review",
+        "ownerRole": "content-director",
+        "verification": ["The content director accepts the package"]
+      },
+      "status": "Ready",
+      "priority": "high",
+      "ownerRole": "content-writer",
+      "reviewerRole": "content-director",
+      "definitionOfReady": ["Positioning is approved"],
+      "definitionOfDone": ["Content is reviewable"],
+      "resourceKeys": [],
+      "relations": { "blockedByKeys": [], "relatedToKeys": [] }
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "artifact": {
+    "schemaVersion": 4,
+    "kind": "linear-role-work-plan",
+    "mode": "preview",
+    "planningStage": "goal-structure",
+    "summary": "Legacy example plan.",
+    "project": {
+      "id": "project-1",
+      "teamIds": ["team-1"]
+    },
+    "initiatives": [],
+    "milestones": [],
+    "resources": [
+      {
+        "key": "legacy.resource.prd",
+        "title": "Legacy PRD",
+        "type": "document",
+        "content": "Synthetic legacy requirements."
+      }
+    ],
+    "issues": [
+      {
+        "key": "legacy.initiative.onboarding",
+        "type": "outcome",
+        "title": "Legacy onboarding parent",
+        "outcome": "Improve onboarding.",
+        "deliverable": "Implementation plan.",
+        "status": "Ready",
+        "priority": "high",
+        "prioritySource": "explicit",
+        "ownerRole": "tech-lead",
+        "reviewerRole": "cpo",
+        "definitionOfReady": ["PRD is linked"],
+        "definitionOfDone": ["Tasks are reviewable"],
+        "resourceKeys": ["legacy.resource.prd"],
+        "relations": {
+          "blockedByKeys": [],
+          "relatedToKeys": []
+        }
+      }
+    ]
+  },
+  "diagnostics": {
+    "warnings": [],
+    "decisions": [
+      {
+        "code": "missing-project-status",
+        "path": "project.projectStatus",
+        "message": "Resolve the live Linear Project status before apply."
+      },
+      {
+        "code": "missing-delivery",
+        "path": "issues[0].delivery",
+        "message": "Choose an explicit delivery mode and terminal checks."
+      }
+    ]
+  },
+  "eligibleForApply": false
+}

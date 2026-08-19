@@ -1,0 +1,81 @@
+{
+  "artifact": {
+    "schemaVersion": 4,
+    "kind": "linear-role-work-plan",
+    "mode": "preview",
+    "planningStage": "outcome-decomposition",
+    "sourceOutcomeKey": "legacy.outcome.launch",
+    "summary": "Legacy v3 synthetic decomposition.",
+    "project": {
+      "id": "project-1",
+      "teamIds": ["team-1"],
+      "projectStatus": {
+        "id": "status-in-progress",
+        "name": "In Progress",
+        "category": "in-progress"
+      },
+      "lifecycle": {
+        "mode": "bounded",
+        "completionCriteria": ["The synthetic outcome has terminal evidence"]
+      },
+      "priority": "high"
+    },
+    "initiatives": [],
+    "milestones": [],
+    "resources": [],
+    "issues": [
+      {
+        "key": "legacy.outcome.launch",
+        "type": "outcome",
+        "title": "Deliver the synthetic launch",
+        "outcome": "The synthetic launch is delivered.",
+        "deliverable": "Accepted launch package.",
+        "delivery": {
+          "mode": "artifact-review",
+          "ownerRole": "marketing-lead",
+          "verification": [
+            { "mode": "artifact-review", "check": "The canonical launch package is accepted" }
+          ]
+        },
+        "status": "Ready",
+        "priority": "high",
+        "prioritySource": "explicit",
+        "ownerRole": "marketing-lead",
+        "reviewerRole": "cpo",
+        "definitionOfReady": ["Scope is explicit"],
+        "definitionOfDone": ["Child work is reviewable"],
+        "resourceKeys": [],
+        "relations": { "blockedByKeys": [], "relatedToKeys": [] }
+      },
+      {
+        "key": "legacy.task.content",
+        "type": "task",
+        "parentKey": "legacy.outcome.launch",
+        "title": "Prepare launch content",
+        "outcome": "Launch content is approved.",
+        "deliverable": "Accepted content package.",
+        "delivery": {
+          "mode": "artifact-review",
+          "ownerRole": "content-director",
+          "verification": [
+            { "mode": "artifact-review", "check": "The content director accepts the package" }
+          ]
+        },
+        "status": "Ready",
+        "priority": "high",
+        "prioritySource": "explicit",
+        "ownerRole": "content-writer",
+        "reviewerRole": "content-director",
+        "definitionOfReady": ["Positioning is approved"],
+        "definitionOfDone": ["Content is reviewable"],
+        "resourceKeys": [],
+        "relations": { "blockedByKeys": [], "relatedToKeys": [] }
+      }
+    ]
+  },
+  "diagnostics": {
+    "warnings": [],
+    "decisions": []
+  },
+  "eligibleForApply": true
+}
