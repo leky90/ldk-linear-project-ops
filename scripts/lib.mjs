@@ -17,14 +17,31 @@ const SECRET_KEY_PATTERN = /(?:api[_-]?key|access[_-]?token|secret|password|priv
 const SECRET_VALUE_PATTERNS = [
   /\bsk-[A-Za-z0-9_-]{16,}\b/u,
   /\blin_api_[A-Za-z0-9_-]{16,}\b/u,
+  /\blin_oauth_[A-Za-z0-9_-]{16,}\b/u,
   /\bgh[opusr]_[A-Za-z0-9_]{20,}\b/u,
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/u,
 ];
 
+// Paths that identify a private machine (home dirs, temp dirs, drive roots,
+// UNC shares). Narrower than containsLocalEvidence: repo-relative references
+// stay legal in planning contracts, but these must never reach Linear.
+const PRIVATE_LOCAL_PATH_PATTERNS = [
+  /\bfile:\/\//iu,
+  /(?:^|[\s([{\x22'\x60])~\//u,
+  /(?:^|[\s([{\x22'\x60])\/(?:Users|home|tmp|private|var\/folders)(?:\/|\b)/u,
+  /[A-Za-z]:\\/u,
+  /\\\\[A-Za-z0-9_.$-]+\\/u,
+];
+
+function containsPrivateLocalPath(value) {
+  if (typeof value !== "string") return false;
+  return PRIVATE_LOCAL_PATH_PATTERNS.some((pattern) => pattern.test(value));
+}
+
 function containsLocalEvidence(value) {
   if (typeof value !== "string") return false;
   const text = value.trim();
-  if (/file:/iu.test(text)) return true;
+  if (containsPrivateLocalPath(text)) return true;
   if (/(?:^|[\s([{\x22'\x60])(?:[A-Za-z0-9_.-]+\/)+[A-Za-z0-9_.-]+\.[A-Za-z0-9]{1,12}(?::\d+)?(?:$|[\s)\]}\x22'\x60])/u.test(text)) return true;
   if (/(?:^|[\s([{\x22'\x60])\b(?:assets|docs|evals|examples|references|schemas|scripts|skills|test|tests|packages|src|app|lib|\.claude-plugin|\.codex-plugin)\//u.test(text)) return true;
   return /(?:^|[\s([{"'`])(?:\/(?:Users|home|tmp|private|var\/folders)(?:\/|\b)|[A-Za-z]:\\|\.{0,2}\/|(?:docs|tests|src|app|lib|\.delivery|\.linear-ops)\/)/u.test(text);
@@ -527,6 +544,9 @@ function validateWorkPlanV4(plan, options) {
       if (!parent || parent.priority !== item.priority) errors.push(`${at}.prioritySource inherited requires the direct parent priority to match`);
     }
     if (item?.phaseKey !== undefined && !phaseKeys.has(item.phaseKey)) errors.push(`${at}.phaseKey references unknown phase ${item.phaseKey}`);
+    for (const field of ["title", "outcome", "context", "deliverable"]) {
+      if (containsPrivateLocalPath(item?.[field])) errors.push(`${at}.${field} contains a private local path and must not reach Linear`);
+    }
 
     const checks = item?.delivery?.verification;
     if (Array.isArray(checks)) {
@@ -550,6 +570,15 @@ function validateWorkPlanV4(plan, options) {
     if (compatibilityPlan.issues?.[index]) delete compatibilityPlan.issues[index].phaseKey;
     if (compatibilityPlan.issues?.[index]) delete compatibilityPlan.issues[index].prioritySource;
   });
+
+  (Array.isArray(plan.resources) ? plan.resources : []).forEach((resource, index) => {
+    for (const field of ["title", "content", "url"]) {
+      if (containsPrivateLocalPath(resource?.[field])) errors.push(`resources[${index}].${field} contains a private local path and must not reach Linear`);
+    }
+  });
+  for (const field of ["name", "summary", "description"]) {
+    if (containsPrivateLocalPath(plan.project?.[field])) errors.push(`project.${field} contains a private local path and must not reach Linear`);
+  }
 
   errors.push(...validatePlanningStructure(plan));
   errors.push(...validateWorkPlan(compatibilityPlan, options));
@@ -662,6 +691,13 @@ export function validateProjectUpdate(update, { projectId, forPublish = false } 
     requiredString(item?.label, `evidence[${index}].label`, errors);
     requiredString(item?.value, `evidence[${index}].value`, errors);
   });
+  collectUnsafeCommentPaths({
+    summary: update.summary,
+    progress: update.progress,
+    risks: update.risks,
+    nextSteps: update.nextSteps,
+    evidence: (Array.isArray(update.evidence) ? update.evidence : []).flatMap((item) => [item?.label, item?.value]),
+  }, "", errors);
   const secretPaths = findSecretPaths(update);
   if (secretPaths.length) errors.push(`secret-like data is forbidden at: ${[...new Set(secretPaths)].join(", ")}`);
   return [...new Set(errors)];
@@ -876,6 +912,8 @@ function validateHandoffV2(handoff, { roles }) {
   }
   if (handoff.type === "review") {
     rejectUnknownProperties(handoff.review, new Set(["decision", "findings", "independence"]), "review", errors);
+    if (!Array.isArray(handoff.checks) || handoff.checks.length === 0) errors.push("review checks must include the reviewed Definition of Done");
+    if (!Array.isArray(handoff.evidence) || handoff.evidence.length === 0) errors.push("review evidence must be non-empty");
     if (!new Set(["passed", "changes-requested"]).has(handoff.review?.decision)) errors.push("review.decision is invalid");
     if (!Array.isArray(handoff.review?.findings)) errors.push("review.findings must be an array");
     if (handoff.review?.decision === "passed" && !new Set(["fresh-session", "fresh-subagent", "external-reviewer"]).has(handoff.review?.independence)) errors.push("review.independence is required for a passed review");
@@ -884,6 +922,8 @@ function validateHandoffV2(handoff, { roles }) {
   }
   if (handoff.type === "verification") {
     rejectUnknownProperties(handoff.verification, new Set(["decision"]), "verification", errors);
+    if (!Array.isArray(handoff.checks) || handoff.checks.length === 0) errors.push("verification checks must be non-empty");
+    if (!Array.isArray(handoff.evidence) || handoff.evidence.length === 0) errors.push("verification evidence must be non-empty");
     if (!new Set(["passed", "failed"]).has(handoff.verification?.decision)) errors.push("verification.decision is invalid");
     if (handoff.verification?.decision === "passed" && handoff.transition?.to === "done") {
       if (handoff.fromRole !== handoff.delivery?.ownerRole) errors.push("verification fromRole must match delivery.ownerRole");
@@ -980,6 +1020,9 @@ function validateSoftwareHandoff(handoff, roles, errors) {
   validateRole(handoff.fromRole, "fromRole", roles, errors);
   if (typeof handoff.software.commitSha !== "string" || !/^[0-9a-f]{7,64}$/iu.test(handoff.software.commitSha)) errors.push("software.commitSha is invalid");
   requiredString(handoff.software.branchName, "software.branchName", errors);
+  if (handoff.software.branchPushed !== undefined && typeof handoff.software.branchPushed !== "boolean") errors.push("software.branchPushed must be boolean");
+  if (handoff.software.pullRequestUrl !== undefined && (typeof handoff.software.pullRequestUrl !== "string" || !/^https?:\/\//u.test(handoff.software.pullRequestUrl))) errors.push("software.pullRequestUrl must be an http(s) URL");
+  if (handoff.software.ciStatus !== undefined && !new Set(["passed", "failed", "pending", "not-configured"]).has(handoff.software.ciStatus)) errors.push("software.ciStatus is invalid");
   if (typeof handoff.software.git?.baselineId !== "string" || !/^[0-9a-f]{64}$/iu.test(handoff.software.git.baselineId)) errors.push("software.git.baselineId is invalid");
   if (typeof handoff.software.git?.changeBaseSha !== "string" || !/^[0-9a-f]{7,64}$/iu.test(handoff.software.git.changeBaseSha)) errors.push("software.git.changeBaseSha is invalid");
   validateStringArray(handoff.software.git?.scopePaths, "software.git.scopePaths", errors, { nonEmpty: true });
