@@ -1,3 +1,5 @@
+import { isOpenLogicalState, isStartedLogicalState } from "./delivery-lifecycle.mjs";
+
 const CATEGORY_LABELS = Object.freeze({
   backlog: "Backlog",
   planned: "Planned",
@@ -5,9 +7,6 @@ const CATEGORY_LABELS = Object.freeze({
   completed: "Completed",
   canceled: "Canceled",
 });
-
-const STARTED_ISSUE_STATES = new Set(["in progress", "in review", "done"]);
-const OPEN_ISSUE_STATES = new Set(["refinement", "ready", "in progress", "in review", "blocked"]);
 
 export function normalizeProjectStatusCategory(value) {
   if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -41,8 +40,11 @@ export function analyzeProjectLifecycle(snapshot) {
   const status = resolveProjectStatus(snapshot.project);
   const issues = (Array.isArray(snapshot.issues) ? snapshot.issues : [])
     .filter((issue) => normalizeIssueState(issue.status) !== "canceled");
-  const startedIssues = issues.filter((issue) => STARTED_ISSUE_STATES.has(normalizeIssueState(issue.status)));
-  const openIssues = issues.filter((issue) => OPEN_ISSUE_STATES.has(normalizeIssueState(issue.status)));
+  const effectiveState = (issue) => issue.logicalState === "done" && issue.terminalVerified !== true
+    ? "in-review"
+    : (issue.logicalState ?? issue.status);
+  const startedIssues = issues.filter((issue) => isStartedLogicalState(effectiveState(issue)));
+  const openIssues = issues.filter((issue) => isOpenLogicalState(effectiveState(issue)));
   const milestones = Array.isArray(snapshot.milestones) ? snapshot.milestones : [];
   const progressedMilestones = milestones.filter(hasMilestoneProgress);
   const lifecycleMode = snapshot.project.lifecycle?.mode ?? snapshot.project.lifecycleMode ?? "unspecified";

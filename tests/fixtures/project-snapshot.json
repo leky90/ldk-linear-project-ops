@@ -97,6 +97,7 @@
       "type": "task",
       "title": "Approve product brief",
       "status": "Done",
+      "terminalVerified": true,
       "priority": "high",
       "ownerRole": "cpo",
       "reviewerRole": "tech-lead",
