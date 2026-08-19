@@ -448,6 +448,10 @@ export function validateWorkPlan(plan, { projectId, teamId, forApply = false, ro
 
 function validateWorkPlanV4(plan, options) {
   const errors = [];
+  // The compat pass below runs with forApply:false, so the v4 layer must gate
+  // apply mode itself or a preview plan could authorize mutations.
+  if (!new Set(["preview", "apply"]).has(plan.mode)) errors.push("mode must be preview or apply");
+  if (options.forApply && plan.mode !== "apply") errors.push("mode must be apply for mutations");
   const allowedPriorities = new Set(["urgent", "high", "normal", "low"]);
   const compatibilityPlan = structuredClone(plan);
   compatibilityPlan.schemaVersion = 3;
