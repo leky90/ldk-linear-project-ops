@@ -8,6 +8,9 @@ export function resolveNextExecutionProfile({ requested, hostCapabilities = {} }
   validateProfile(requested);
   if (requested.sessionPolicy === "reuse") return { action: "reuse-session", profile: requested };
   if (hostCapabilities.newSession === true) return { action: "start-new-session", profile: requested };
+  // "preferred" is a preference, not a requirement: fall back to the current
+  // session instead of stalling when the host cannot start one.
+  if (requested.sessionPolicy === "new-preferred") return { action: "reuse-session", profile: requested, fallback: "new-session-unavailable" };
   return { action: "stop-at-handoff", profile: requested, resumePromptRequired: true };
 }
 

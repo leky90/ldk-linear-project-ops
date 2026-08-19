@@ -65,6 +65,7 @@ function resolveIntent(prompt) {
 
 function routeIntent(intent, binding) {
   const attributes = `project_id="${escapeXml(binding.projectId)}" team_id="${escapeXml(binding.teamId)}"`;
+  if (intent.kind === "cross-tracker") return wrap(attributes, "Cross-tracker request. Ask the owner for an explicit source tracker, destination tracker, entity mapping, and write scope before mutating either side; never mirror by inference.");
   if (intent.kind === "reconcile") return wrap(attributes, "Use $linear-reconcile. Project-wide legacy cleanup must first produce an exact validated preview; delete only individually approved IDs after preserving canonical content and relations.");
   if (intent.kind === "status") return wrap(attributes, "Use $linear-project-status. Read the live Project status ID/category and run lifecycle consistency analysis. Reports are read-only; a direct fix/update request may apply a verified Backlog/Planned → In Progress correction. Never infer Completed from an empty queue. Publish a native Linear Project Update only on a direct publish request.");
   if (intent.kind === "create") return wrap(attributes, "Use $linear-create-work. Use native Initiative → Project → Milestone → Issue hierarchy and issue type outcome; draft when asked to plan or preview, apply on a direct create/update request. Never mirror the plan to GitHub without an explicit cross-tracker mapping and scope.");
@@ -73,7 +74,7 @@ function routeIntent(intent, binding) {
 
 export function classifyTracker(prompt, bindings) {
   const hasGitHubSignal = /(?:\bgithub\b|github\.com|\bgh\s+project\b|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#\d+)/iu.test(prompt);
-  const hasLinearSignal = /(?:\blinear\b|linear\.app|\b[A-Z][A-Z0-9]{1,9}-\d+\b)/iu.test(prompt);
+  const hasLinearSignal = /(?:\blinear\b|linear\.app)/iu.test(prompt) || /\b[A-Z][A-Z0-9]{1,9}-\d+\b/u.test(prompt);
   if (hasGitHubSignal && hasLinearSignal) return "ambiguous";
   if (hasGitHubSignal) return "github";
   if (hasLinearSignal) return "linear";

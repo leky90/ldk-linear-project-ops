@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-import { handle } from "../scripts/hook-entry.mjs";
+import { classifyTracker, handle } from "../scripts/hook-entry.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const linear = { projectId: "project-example", teamId: "team-example" };
@@ -37,4 +37,11 @@ test("Claude and Codex hook manifests remain behaviorally identical", async () =
   const claude = JSON.parse(await readFile(join(root, "hooks", "hooks.json"), "utf8"));
   const codex = JSON.parse(await readFile(join(root, "hooks", "hooks.codex.json"), "utf8"));
   assert.deepEqual(codex, claude);
+});
+
+test("lowercase technical tokens are not Linear issue keys", () => {
+  const bindings = { linear: null, github: { owner: "example", projectNumber: 1 } };
+  assert.equal(classifyTracker("convert the hash output to sha-256", bindings), "github");
+  assert.equal(classifyTracker("normalize the utf-8 encoded docs", bindings), "github");
+  assert.equal(classifyTracker("fix LDK-123", bindings), "linear");
 });

@@ -305,3 +305,14 @@ function event(base, overrides) {
 async function validHandoff() {
   return JSON.parse(await readFile(join(root, "tests", "fixtures", "valid-handoff-v2.json"), "utf8"));
 }
+
+test("new-preferred falls back to reuse when the host cannot start a session", () => {
+  const requested = { sessionPolicy: "new-preferred", modelClass: "standard", effort: "medium", reason: "prefer isolation" };
+  assert.deepEqual(resolveNextExecutionProfile({ requested, hostCapabilities: { newSession: false } }), {
+    action: "reuse-session",
+    profile: requested,
+    fallback: "new-session-unavailable",
+  });
+  const required = { ...requested, sessionPolicy: "new-required" };
+  assert.equal(resolveNextExecutionProfile({ requested: required, hostCapabilities: {} }).action, "stop-at-handoff");
+});
