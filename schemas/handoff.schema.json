@@ -20,46 +20,100 @@
     "nextAction"
   ],
   "properties": {
-    "schemaVersion": { "const": 2 },
-    "kind": { "const": "linear-role-handoff" },
-    "type": { "enum": ["handoff", "review", "delivery", "verification", "blocked", "reconciliation"] },
-    "issueId": { "type": "string", "minLength": 1 },
-    "fromRole": { "$ref": "#/$defs/role" },
-    "toRole": { "$ref": "#/$defs/role" },
-    "summary": { "type": "string", "minLength": 1 },
-    "observedAt": { "$ref": "#/$defs/timestamp" },
+    "schemaVersion": {
+      "const": 2
+    },
+    "kind": {
+      "const": "linear-role-handoff"
+    },
+    "type": {
+      "enum": [
+        "handoff",
+        "review",
+        "delivery",
+        "verification",
+        "blocked",
+        "reconciliation"
+      ]
+    },
+    "issueId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fromRole": {
+      "$ref": "#/$defs/role"
+    },
+    "toRole": {
+      "$ref": "#/$defs/role"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "observedAt": {
+      "$ref": "#/$defs/timestamp"
+    },
     "observedState": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["issueUpdatedAt", "status", "logicalState"],
+      "required": [
+        "issueUpdatedAt",
+        "status",
+        "logicalState"
+      ],
       "properties": {
-        "issueUpdatedAt": { "$ref": "#/$defs/timestamp" },
-        "status": { "type": "string", "minLength": 1 },
-        "logicalState": { "$ref": "#/$defs/logicalState" }
+        "issueUpdatedAt": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "logicalState": {
+          "$ref": "#/$defs/logicalState"
+        }
       }
     },
     "transition": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["from", "to"],
+      "required": [
+        "from",
+        "to"
+      ],
       "properties": {
-        "from": { "$ref": "#/$defs/logicalState" },
-        "to": { "$ref": "#/$defs/logicalState" }
+        "from": {
+          "$ref": "#/$defs/logicalState"
+        },
+        "to": {
+          "$ref": "#/$defs/logicalState"
+        }
       }
     },
     "deliverables": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 }
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "checks": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["item", "passed"],
+        "required": [
+          "item",
+          "passed"
+        ],
         "properties": {
-          "item": { "type": "string", "minLength": 1 },
-          "passed": { "type": "boolean" }
+          "item": {
+            "type": "string",
+            "minLength": 1
+          },
+          "passed": {
+            "type": "boolean"
+          }
         }
       }
     },
@@ -68,166 +122,448 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["kind", "label", "value", "visibility"],
+        "required": [
+          "kind",
+          "label",
+          "value",
+          "visibility"
+        ],
         "properties": {
-          "kind": { "enum": ["url", "linear-resource", "commit", "text", "local-note", "local-file", "validator", "report"] },
-          "label": { "type": "string", "minLength": 1 },
-          "value": { "type": "string", "minLength": 1 },
-          "visibility": { "enum": ["shared", "local"] }
+          "kind": {
+            "enum": [
+              "url",
+              "linear-resource",
+              "commit",
+              "text",
+              "local-note",
+              "local-file",
+              "validator",
+              "report"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1
+          },
+          "visibility": {
+            "enum": [
+              "shared",
+              "local"
+            ]
+          }
         }
       }
     },
-    "knownLimitations": { "type": "array", "items": { "type": "string" } },
-    "nextAction": { "type": "string", "minLength": 1 },
-    "delivery": { "$ref": "#/$defs/delivery" },
+    "knownLimitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "nextAction": {
+      "type": "string",
+      "minLength": 1
+    },
+    "delivery": {
+      "$ref": "#/$defs/delivery"
+    },
     "review": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["decision", "findings"],
+      "required": [
+        "decision",
+        "findings"
+      ],
       "properties": {
-        "decision": { "enum": ["passed", "changes-requested"] },
-        "findings": { "type": "array", "items": { "type": "string" } },
-        "independence": { "enum": ["fresh-session", "fresh-subagent", "external-reviewer"] }
+        "decision": {
+          "enum": [
+            "passed",
+            "changes-requested"
+          ]
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "independence": {
+          "enum": [
+            "fresh-session",
+            "fresh-subagent",
+            "external-reviewer"
+          ]
+        }
       },
       "allOf": [
         {
           "if": {
-            "required": ["decision"],
-            "properties": { "decision": { "const": "passed" } }
+            "required": [
+              "decision"
+            ],
+            "properties": {
+              "decision": {
+                "const": "passed"
+              }
+            }
           },
-          "then": { "required": ["independence"] }
+          "then": {
+            "required": [
+              "independence"
+            ]
+          }
         }
       ]
     },
     "verification": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["decision"],
+      "required": [
+        "decision"
+      ],
       "properties": {
-        "decision": { "enum": ["passed", "failed"] }
+        "decision": {
+          "enum": [
+            "passed",
+            "failed"
+          ]
+        }
       }
     },
     "blocker": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["reason", "impact", "neededFrom", "resumeWhen"],
+      "required": [
+        "reason",
+        "impact",
+        "neededFrom",
+        "resumeWhen"
+      ],
       "properties": {
-        "reason": { "type": "string", "minLength": 1 },
-        "impact": { "type": "string", "minLength": 1 },
-        "neededFrom": { "type": "string", "minLength": 1 },
-        "resumeWhen": { "type": "string", "minLength": 1 }
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "impact": {
+          "type": "string",
+          "minLength": 1
+        },
+        "neededFrom": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resumeWhen": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "nextExecution": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["sessionPolicy", "modelClass", "effort", "reason"],
+      "required": [
+        "sessionPolicy",
+        "modelClass",
+        "effort",
+        "reason"
+      ],
       "properties": {
-        "sessionPolicy": { "enum": ["reuse", "new-preferred", "new-required"] },
-        "modelClass": { "enum": ["fast", "standard", "reasoning"] },
-        "effort": { "enum": ["low", "medium", "high"] },
-        "reason": { "type": "string", "minLength": 1 }
+        "sessionPolicy": {
+          "enum": [
+            "reuse",
+            "new-preferred",
+            "new-required"
+          ]
+        },
+        "modelClass": {
+          "enum": [
+            "fast",
+            "standard",
+            "reasoning"
+          ]
+        },
+        "effort": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "software": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["commitSha", "branchName", "git"],
+      "required": [
+        "commitSha",
+        "branchName",
+        "git"
+      ],
       "properties": {
-        "commitSha": { "type": "string", "pattern": "^[0-9a-fA-F]{7,64}$" },
-        "branchName": { "type": "string", "minLength": 1 },
-        "branchPushed": { "type": "boolean" },
-        "pullRequestUrl": { "type": "string", "format": "uri" },
-        "ciStatus": { "enum": ["passed", "failed", "pending", "not-configured"] },
+        "commitSha": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{7,64}$"
+        },
+        "branchName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "branchPushed": {
+          "type": "boolean"
+        },
+        "pullRequestUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "ciStatus": {
+          "enum": [
+            "passed",
+            "failed",
+            "pending",
+            "not-configured"
+          ]
+        },
         "git": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["baselineId", "changeBaseSha", "scopePaths"],
+          "required": [
+            "baselineId",
+            "changeBaseSha",
+            "scopePaths"
+          ],
           "properties": {
-            "baselineId": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-            "changeBaseSha": { "type": "string", "pattern": "^[0-9a-fA-F]{7,64}$" },
+            "baselineId": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "changeBaseSha": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{7,64}$"
+            },
             "scopePaths": {
               "type": "array",
               "minItems": 1,
               "uniqueItems": true,
-              "items": { "type": "string", "minLength": 1 }
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
             }
           }
         }
       }
+    },
+    "appliedState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "issueUpdatedAt",
+        "status"
+      ],
+      "properties": {
+        "issueUpdatedAt": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "description": "Live issue state re-read after this event's own mutations landed; keeps the handoff fresh for status reporting."
     }
   },
   "$defs": {
-    "role": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
-    "timestamp": { "type": "string", "format": "date-time" },
+    "role": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
     "logicalState": {
-      "enum": ["refinement", "ready", "in-progress", "in-review", "ready-to-deliver", "delivery-verification", "blocked", "done", "canceled"]
+      "enum": [
+        "refinement",
+        "ready",
+        "in-progress",
+        "in-review",
+        "ready-to-deliver",
+        "delivery-verification",
+        "blocked",
+        "done",
+        "canceled"
+      ]
     },
     "deliveryMode": {
-      "enum": ["decision", "artifact-review", "publish", "external-action", "software-merge", "production-release", "operations-change"]
+      "enum": [
+        "decision",
+        "artifact-review",
+        "publish",
+        "external-action",
+        "software-merge",
+        "production-release",
+        "operations-change"
+      ]
     },
     "deliveryCheck": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mode", "check"],
+      "required": [
+        "mode",
+        "check"
+      ],
       "properties": {
-        "mode": { "$ref": "#/$defs/deliveryMode" },
-        "check": { "type": "string", "minLength": 1 },
-        "passed": { "type": "boolean" }
+        "mode": {
+          "$ref": "#/$defs/deliveryMode"
+        },
+        "check": {
+          "type": "string",
+          "minLength": 1
+        },
+        "passed": {
+          "type": "boolean"
+        }
       }
     },
     "delivery": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mode", "ownerRole", "phase", "checks"],
+      "required": [
+        "mode",
+        "ownerRole",
+        "phase",
+        "checks"
+      ],
       "properties": {
-        "mode": { "$ref": "#/$defs/deliveryMode" },
-        "ownerRole": { "$ref": "#/$defs/role" },
-        "phase": { "enum": ["review", "ready-to-deliver", "delivery-verification", "complete"] },
-        "target": { "type": "string", "minLength": 1 },
+        "mode": {
+          "$ref": "#/$defs/deliveryMode"
+        },
+        "ownerRole": {
+          "$ref": "#/$defs/role"
+        },
+        "phase": {
+          "enum": [
+            "review",
+            "ready-to-deliver",
+            "delivery-verification",
+            "complete"
+          ]
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
         "checks": {
           "type": "array",
           "minItems": 1,
-          "items": { "$ref": "#/$defs/deliveryCheck" }
+          "items": {
+            "$ref": "#/$defs/deliveryCheck"
+          }
         }
       }
     }
   },
   "allOf": [
     {
-      "if": { "required": ["type"], "properties": { "type": { "const": "handoff" } } },
-      "then": {
-        "required": ["toRole", "deliverables"],
+      "if": {
+        "required": [
+          "type"
+        ],
         "properties": {
-          "deliverables": { "minItems": 1 },
-          "checks": { "minItems": 1 },
-          "evidence": { "minItems": 1 }
+          "type": {
+            "const": "handoff"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "toRole",
+          "deliverables"
+        ],
+        "properties": {
+          "deliverables": {
+            "minItems": 1
+          },
+          "checks": {
+            "minItems": 1
+          },
+          "evidence": {
+            "minItems": 1
+          }
         }
       }
     },
     {
-      "if": { "required": ["type"], "properties": { "type": { "const": "review" } } },
-      "then": {
-        "required": ["review"],
+      "if": {
+        "required": [
+          "type"
+        ],
         "properties": {
-          "checks": { "minItems": 1 },
-          "evidence": { "minItems": 1 }
+          "type": {
+            "const": "review"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "review"
+        ],
+        "properties": {
+          "checks": {
+            "minItems": 1
+          },
+          "evidence": {
+            "minItems": 1
+          }
         }
       }
     },
     {
-      "if": { "required": ["type"], "properties": { "type": { "const": "verification" } } },
-      "then": {
-        "required": ["verification"],
+      "if": {
+        "required": [
+          "type"
+        ],
         "properties": {
-          "checks": { "minItems": 1 },
+          "type": {
+            "const": "verification"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "verification"
+        ],
+        "properties": {
+          "checks": {
+            "minItems": 1
+          },
           "evidence": {
             "minItems": 1,
             "contains": {
-              "required": ["kind", "visibility"],
+              "required": [
+                "kind",
+                "visibility"
+              ],
               "properties": {
-                "kind": { "enum": ["url", "linear-resource", "commit", "text"] },
-                "visibility": { "const": "shared" }
+                "kind": {
+                  "enum": [
+                    "url",
+                    "linear-resource",
+                    "commit",
+                    "text"
+                  ]
+                },
+                "visibility": {
+                  "const": "shared"
+                }
               }
             }
           }
@@ -235,8 +571,21 @@
       }
     },
     {
-      "if": { "required": ["type"], "properties": { "type": { "const": "blocked" } } },
-      "then": { "required": ["blocker"] }
+      "if": {
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "const": "blocked"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "blocker"
+        ]
+      }
     }
   ]
 }

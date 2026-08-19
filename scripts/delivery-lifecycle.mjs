@@ -136,6 +136,8 @@ export function validateHandoffTransition({
     if (!OPEN_LOGICAL_STATES.has(fromState) || !new Set(["blocked", "refinement"]).has(toState)) errors.push("blocked event must transition a nonterminal state to blocked or refinement");
   } else if (type === "reconciliation") {
     const repaired = (fromState === "blocked" && new Set(["ready", "refinement"]).has(toState))
+      || (fromState === "refinement" && toState === "ready")
+      || (fromState === "in-progress" && toState === "ready")
       || (fromState === "ready-to-deliver" && toState === "in-review")
       || (fromState === "delivery-verification" && new Set(["in-review", "ready"]).has(toState))
       || (OPEN_LOGICAL_STATES.has(fromState) && toState === "canceled");

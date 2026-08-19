@@ -824,7 +824,7 @@ function validateHandoffV2(handoff, { roles }) {
 
   rejectUnknownProperties(handoff, new Set([
     "schemaVersion", "kind", "type", "issueId", "fromRole", "toRole", "summary", "observedAt",
-    "observedState", "transition", "deliverables", "checks", "evidence", "knownLimitations",
+    "observedState", "appliedState", "transition", "deliverables", "checks", "evidence", "knownLimitations",
     "nextAction", "delivery", "review", "verification", "blocker", "software", "nextExecution",
   ]), "handoff", errors);
   if (handoff.kind !== "linear-role-handoff") errors.push("kind must be linear-role-handoff");
@@ -844,6 +844,20 @@ function validateHandoffV2(handoff, { roles }) {
     requiredString(handoff.observedState.status, "observedState.status", errors);
     requiredString(handoff.observedState.logicalState, "observedState.logicalState", errors);
     if (Date.parse(handoff.observedAt) < Date.parse(handoff.observedState.issueUpdatedAt)) errors.push("observedAt cannot be before observedState.issueUpdatedAt");
+  }
+
+  if (handoff.appliedState !== undefined) {
+    rejectUnknownProperties(handoff.appliedState, new Set(["issueUpdatedAt", "status"]), "appliedState", errors);
+    if (!handoff.appliedState || typeof handoff.appliedState !== "object" || Array.isArray(handoff.appliedState)) {
+      errors.push("appliedState must be an object");
+    } else {
+      validateTimestamp(handoff.appliedState.issueUpdatedAt, "appliedState.issueUpdatedAt", errors);
+      requiredString(handoff.appliedState.status, "appliedState.status", errors);
+      if (typeof handoff.observedState?.issueUpdatedAt === "string"
+        && Date.parse(handoff.appliedState.issueUpdatedAt) < Date.parse(handoff.observedState.issueUpdatedAt)) {
+        errors.push("appliedState.issueUpdatedAt cannot predate observedState.issueUpdatedAt");
+      }
+    }
   }
 
   rejectUnknownProperties(handoff.transition, new Set(["from", "to"]), "transition", errors);

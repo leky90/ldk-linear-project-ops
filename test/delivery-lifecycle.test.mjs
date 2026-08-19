@@ -113,3 +113,9 @@ test("typed terminal verification rejects mismatched and failed checks", () => {
 function passedChecks(mode) {
   return [{ mode, check: "Terminal result is verified", passed: true }];
 }
+
+test("reconciliation repairs refinement promotion and abandoned active work", () => {
+  assert.equal(validateHandoffTransition({ type: "reconciliation", deliveryMode: "decision", from: "refinement", to: "ready" }).length, 0);
+  assert.equal(validateHandoffTransition({ type: "reconciliation", deliveryMode: "software-merge", from: "in-progress", to: "ready" }).length, 0);
+  assert.ok(validateHandoffTransition({ type: "reconciliation", deliveryMode: "decision", from: "ready", to: "done" }).length > 0, "reconciliation still cannot mint Done");
+});
