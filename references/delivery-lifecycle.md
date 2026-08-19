@@ -84,6 +84,16 @@ Never fabricate a status or use `Done` as a substitute.
 Handoff v2 event types are `handoff`, `review`, `delivery`, `verification`,
 `blocked`, and `reconciliation`. Mutation validation re-reads the issue and rejects
 a stale `issueUpdatedAt` or a logical `transition.from` that no longer matches.
+After the final mutation, re-read the issue and record the result as
+`appliedState` in the local handoff — the run's own comment and status writes
+advance `updatedAt`, so `appliedState` is what keeps the handoff fresh for
+status reporting.
+
+Reconciliation repairs are limited to the recorded matrix: `blocked → ready`
+or `refinement`, `refinement → ready` (DoR now passes), `in-progress → ready`
+(abandoned active work), `ready-to-deliver → in-review`,
+`delivery-verification → in-review` or `ready`, and any open state → `canceled`
+with explicit authority. Reconciliation never mints `Done`.
 
 ## Authorization and evidence
 

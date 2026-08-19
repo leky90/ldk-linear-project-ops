@@ -14,8 +14,10 @@ switch or delete, especially in a shared workspace.
 ## Preflight
 
 1. Resolve the exact repository root, primary worktree, task worktree, current
-   branch, task branch, and integration branch. Do not infer cleanup targets
-   from directory globs.
+   branch, task branch, and integration branch. The integration branch comes
+   from the issue's `delivery.target` (falling back to the repository default
+   branch); every command below writes it as `<integration>`. Do not infer
+   cleanup targets from directory globs.
 2. Run `git status --short --branch` in every candidate worktree. If any target
    contains user changes, stop cleanup for that target and report it.
 3. Run `git worktree list --porcelain` and distinguish the primary worktree from
@@ -23,9 +25,9 @@ switch or delete, especially in a shared workspace.
 4. Run `git fetch --prune origin` so merge and patch-equivalence decisions use
    current remote state.
 5. Prove that the task branch has no unique work left:
-   - Prefer `git merge-base --is-ancestor <task-branch> origin/main` for a normal
+   - Prefer `git merge-base --is-ancestor <task-branch> origin/<integration>` for a normal
      merge.
-   - For squash or rebased merges, inspect `git cherry origin/main
+   - For squash or rebased merges, inspect `git cherry origin/<integration>
      <task-branch>`. Cleanup is safe only when it prints nothing or every commit
      is prefixed with `-`.
    - Any `+` line means the branch has uniquely unmerged work; preserve it.
@@ -40,12 +42,12 @@ When the current checkout is the primary worktree and is clean:
 1. Preserve the current branch unless the preflight proves it merged or
    patch-equivalent. A branch unrelated to the completed issue is not a cleanup
    target.
-2. Run `git switch main` and then `git merge --ff-only origin/main`. If the
+2. Run `git switch <integration>` and then `git merge --ff-only origin/<integration>`. If the
    fast-forward fails, stop and report the divergence; do not reset or rebase
    automatically.
 3. Delete the exact local task branch only after the preflight proof. Use the
    normal delete for an ancestor merge; a forced local delete is allowed only
-   for a branch whose complete `git cherry origin/main <task-branch>` output is
+   for a branch whose complete `git cherry origin/<integration> <task-branch>` output is
    patch-equivalent.
 4. Run `git worktree prune`.
 
@@ -56,8 +58,8 @@ inside the target directory:
 
 1. Recheck that the linked worktree is clean and that its branch passes the
    preflight proof.
-2. Update the clean primary checkout with `git switch main` and `git merge
-   --ff-only origin/main`.
+2. Update the clean primary checkout with `git switch <integration>` and `git merge
+   --ff-only origin/<integration>`.
 3. Remove the exact linked path without `--force`, then delete the exact local
    task branch according to the same merge or patch-equivalence rule.
 4. Run `git worktree prune`.
@@ -69,8 +71,8 @@ requires explicit user authority or the repository's normal merged-PR policy.
 
 Before reporting completion, capture all of the following:
 
-- `git status --short --branch` shows a clean primary checkout on `main`;
-- primary `HEAD` matches the intended `origin/main` release after the
+- `git status --short --branch` shows a clean primary checkout on `<integration>`;
+- primary `HEAD` matches the intended `origin/<integration>` release after the
   fast-forward;
 - `git worktree list --porcelain` no longer contains the task worktree;
 - the exact local task branch is absent when it was safe to delete;

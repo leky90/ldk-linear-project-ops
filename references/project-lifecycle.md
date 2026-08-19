@@ -9,9 +9,14 @@ diagnostics rather than disappearing from reports.
 Resolve Project status from live Linear data. Prefer `status.id`, `status.name`, and
 its category; never assume a workspace uses a particular custom status name.
 
-`lifecycle.mode` and completion criteria are RoleFlow contract metadata rather than
-native Linear Project properties. Persist them in the approved Project description
-or a linked Project Lifecycle resource, then read that durable source in reports.
+`lifecycle.mode`, completion criteria, and logical phases are RoleFlow contract
+metadata rather than native Linear Project properties. Persist each as a single
+machine-readable marker block in the approved Project description (or a linked
+Project Lifecycle resource when the description is owner-managed) — phases as
+`<!-- linear-project-ops:phases [{"key":"...","order":1,"objective":"..."}] -->`
+and lifecycle as `<!-- linear-project-ops:lifecycle {"mode":"...","completionCriteria":[...]} -->` —
+then read that durable source back in reports so two operators reconstruct the
+same `snapshot.phases` from identical Linear state.
 
 Linear categories used by RoleFlow are `backlog`, `planned`, `in-progress`,
 `completed`, and `canceled`. Legacy plan values such as `started` are read-compatible

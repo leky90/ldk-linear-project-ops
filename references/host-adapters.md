@@ -21,6 +21,13 @@ relations map `blockedByKeys → blockedBy`, `relatedToKeys → relatedTo`,
 by their normalized verb. Unknown Linear operations are capability warnings and must
 not be guessed as reads or writes.
 
+Hosts register the Linear server under different names — `linear`,
+`linear-server`, or an opaque connector id — so classification keys on the
+operation name (`save_issue`, `save_status_update`, `merge_diff`, …), not on the
+server segment. A tool from an unrecognized server whose operation matches the
+Linear catalog is treated as Linear; genuinely unknown operations stay
+capability warnings.
+
 For lifecycle handoff, map only the abstract session/model/effort values described in
 [execution-profiles.md](execution-profiles.md). If fresh sessions or subagents are
 unsupported, return the exact resume prompt and stop without claiming dispatch.

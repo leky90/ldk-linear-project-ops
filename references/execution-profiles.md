@@ -24,5 +24,7 @@ Handoff v2 may request:
 
 These are host-neutral values. Host adapters may start a new session only when the
 capability exists and must not persist provider model IDs, prompts, session IDs, or
-effort controls to Linear. If `new-preferred` or `new-required` cannot be honored,
+effort controls to Linear. If `new-required` cannot be honored,
 stop at handoff and return an exact resume prompt instead of fabricating dispatch.
+`new-preferred` is a preference: when the host cannot start a new session, fall
+back to reusing the current session and record the fallback in the handoff.

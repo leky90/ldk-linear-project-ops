@@ -56,8 +56,8 @@ test("terminal issue runs require safe Git and worktree closure", async () => {
     "git status --short --branch",
     "git worktree list --porcelain",
     "git fetch --prune origin",
-    "git merge --ff-only origin/main",
-    "git cherry origin/main",
+    "git merge --ff-only origin/<integration>",
+    "git cherry origin/<integration>",
     "git worktree prune",
   ]) assert.match(closure, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
   assert.match(closure, /Never delete a remote branch/u);
