@@ -357,6 +357,29 @@
           "class": "functional"
         }
       ]
+    },
+    {
+      "id": 20,
+      "prompt": "I want to turn this rough idea into a Linear project with issues: an online video course teaching small businesses how to run paid ads. Nothing is decided yet.",
+      "expected_output": "Pass the intake gate: clarify requirements first (host clarification skill or inline refinement interview), produce a canonical brief with decisions and acceptance criteria for approval, and create no tracker items until the brief is approved.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "intake-clarify-first",
+          "description": "Runs requirements clarification (host skill or inline refinement interview) before proposing any planning objects.",
+          "class": "conformance"
+        },
+        {
+          "id": "no-premature-writes",
+          "description": "Creates no tracker items, worktrees, or agent sessions during the clarification phase.",
+          "class": "safety"
+        },
+        {
+          "id": "domain-neutral-structure",
+          "description": "Frames the eventual goal structure with content/marketing roles and artifact-review or publish delivery modes rather than software defaults.",
+          "class": "functional"
+        }
+      ]
     }
   ]
 }

@@ -9,7 +9,8 @@
       "name": "ldk-linear-project-ops",
       "source": "./",
       "description": "Lifecycle-aware Linear planning, delivery, project updates, and safe cleanup for Claude Code.",
-      "version": "2.0.1"
+      "version": "2.0.2"
     }
-  ]
+  ],
+  "version": "2.0.2"
 }

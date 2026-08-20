@@ -8,13 +8,13 @@ import { validateProjectBinding } from "../scripts/lib.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 
-test("package exposes the same v2.0.1 plugin for Codex and Claude Code", async () => {
+test("package exposes the same v2.0.2 plugin for Codex and Claude Code", async () => {
   const codex = JSON.parse(await readFile(join(root, ".codex-plugin", "plugin.json"), "utf8"));
   const claude = JSON.parse(await readFile(join(root, ".claude-plugin", "plugin.json"), "utf8"));
   const marketplace = JSON.parse(await readFile(join(root, ".claude-plugin", "marketplace.json"), "utf8"));
   const packageJson = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
   assert.equal(packageJson.name, "ldk-linear-project-ops");
-  assert.equal(packageJson.version, "2.0.1");
+  assert.equal(packageJson.version, "2.0.2");
   assert.equal(codex.name, packageJson.name);
   assert.equal(codex.version.split("+")[0], packageJson.version);
   assert.equal(claude.name, packageJson.name);
@@ -209,10 +209,26 @@ test("internal work lock contains no Linear transport", async () => {
 async function listSourceFiles(directory) {
   const files = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
-    if ([".git", ".codegraph", ".state", ".linear-ops", "node_modules"].includes(entry.name)) continue;
+    if ([".git", ".codegraph", ".state", ".linear-ops", "node_modules", "poc"].includes(entry.name)) continue;
     const path = join(directory, entry.name);
     if (entry.isDirectory()) files.push(...await listSourceFiles(path));
     else files.push(path);
   }
   return files;
 }
+
+test("planning intake gates un-briefed goals before goal structure", async () => {
+  const intake = await readFile(join(root, "references", "planning-intake.md"), "utf8");
+  const create = await readFile(join(root, "skills", "linear-create-work", "SKILL.md"), "utf8");
+
+  assert.match(create, /planning-intake\.md/u, "create-work must route through the intake reference");
+  assert.match(intake, /requirements-clarification skill/u, "capability-agnostic: names the skill class, not one vendor");
+  assert.doesNotMatch(intake, /superpowers:|obra\//u, "must not hard-couple to a specific plugin");
+  assert.match(intake, /refinement interview/iu, "inline fallback when no clarification skill exists");
+  assert.match(intake, /approved brief.*skips|skips? (the )?clarification/iu, "approved brief skips the gate");
+  assert.match(intake, /contract[\s\S]{0,120}never re-?clarified/iu, "contracted issues are not re-clarified");
+  assert.match(intake, /no\s+tracker (items|writes)/iu, "clarification performs no tracker writes");
+  assert.match(intake, /no worktrees? or (agent )?sessions/iu, "clarification spawns no execution runtime");
+  assert.match(intake, /execution.*only after (the )?issues exist/iu, "claim/execution waits for issues");
+  assert.match(intake, /course|film|content/iu, "domain-neutral example beyond software");
+});

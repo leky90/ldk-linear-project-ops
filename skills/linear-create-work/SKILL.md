@@ -7,6 +7,13 @@ description: Use when an owner asks to plan, draft, create, organize, schedule, 
 
 Turn an owner's intent into native Linear planning objects and human-readable outcome contracts. RoleFlow v4 planning is goal-first: follow `Initiative → Project → logical phase → Milestone → Outcome/Decision`; never use an issue-level `initiative` type and never create execution tasks during initial goal structure.
 
+Before building structure from an idea that has no approved brief, pass the
+intake gate in [planning-intake.md](../../references/planning-intake.md):
+clarify requirements first (through the host's requirements-clarification
+skill or an inline refinement interview), get the brief approved, and only
+then create planning objects. An approved brief or an issue with an existing
+contract skips the gate.
+
 Before selecting a tracker, read [tracker-routing.md](../../references/tracker-routing.md).
 Before choosing issue, resource, repository, or comment placement, read
 [artifact-routing.md](../../references/artifact-routing.md).
